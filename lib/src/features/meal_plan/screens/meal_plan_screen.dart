@@ -86,6 +86,16 @@ class MealPlanScreen extends ConsumerWidget {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/discover'),
+        backgroundColor: CookestTokens.colorPrimaryDEFAULT,
+        foregroundColor: Colors.white,
+        icon: const Icon(LucideIcons.sparkles, size: 18),
+        label: Text(
+          'Discover',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Column(

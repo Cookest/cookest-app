@@ -23,6 +23,7 @@ import '../features/subscription/screens/paywall_screen.dart';
 import '../features/recipes/screens/recipe_detail_screen.dart';
 import '../features/recipes/screens/create_recipe_screen.dart';
 import '../features/pantry/screens/grocery_scan_screen.dart';
+import '../features/meal_plan/screens/recipe_discover_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -102,6 +103,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/discover',
+        builder: (context, state) => const RecipeDiscoverScreen(),
       ),
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
