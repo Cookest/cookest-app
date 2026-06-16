@@ -28,6 +28,7 @@ import '../features/meal_plan/screens/recipe_discover_screen.dart';
 import '../features/stores/screens/stores_map_screen.dart';
 import '../features/stores/screens/store_detail_screen.dart';
 import '../features/nutrition/screens/what_to_buy_screen.dart';
+import '../features/family/screens/family_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -127,6 +128,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/family',
+        builder: (context, state) => const FamilyScreen(),
       ),
       GoRoute(
         path: '/discover',

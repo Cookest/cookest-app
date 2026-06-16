@@ -176,6 +176,13 @@ class ProfileScreen extends ConsumerWidget {
                     const CkDivider(),
                     _buildSettingsRow(
                       context,
+                      icon: LucideIcons.users,
+                      label: 'Family',
+                      onTap: () => context.push('/family'),
+                    ),
+                    const CkDivider(),
+                    _buildSettingsRow(
+                      context,
                       icon: LucideIcons.crown,
                       label: 'Upgrade',
                       onTap: () => context.push('/paywall'),
