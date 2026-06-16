@@ -136,7 +136,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Widget _buildChip(String label, String value, Set<String> selectedSet) {
     return FilterChip(
-      label: Text(label, style: GoogleFonts.inter(fontSize: 14)),
+      label: Text(
+        label,
+        style: GoogleFonts.inter(
+          fontSize: 14,
+          color: context.appHeading,
+        ),
+      ),
       selected: selectedSet.contains(value),
       selectedColor: CookestTokens.colorPrimaryDEFAULT.withValues(alpha: 0.2),
       checkmarkColor: CookestTokens.colorPrimaryDEFAULT,
