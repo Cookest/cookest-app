@@ -37,7 +37,57 @@ target 'Runner' do
 end
 
 post_install do |installer|
+  # Create symlink for build/ios to bypass iCloud sync issues
+  build_ios_dir = File.expand_path(File.join('..', '..', 'build', 'ios'), __FILE__)
+  cache_dir = '/Users/exxo/Library/Caches/cookest-ui-build/ios'
+  
+  if File.exist?(build_ios_dir) && !File.symlink?(build_ios_dir)
+    require 'fileutils'
+    FileUtils.rm_rf(build_ios_dir)
+  end
+  
+  require 'fileutils'
+  build_dir = File.dirname(build_ios_dir)
+  FileUtils.mkdir_p(build_dir)
+  FileUtils.mkdir_p(cache_dir)
+  
+  unless File.symlink?(build_ios_dir)
+    File.symlink(cache_dir, build_ios_dir)
+  end
+
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+    
+    # Inject codesign attributes cleanup for Pod targets to bypass iCloud sync metadata issues
+    if target.respond_to?(:new_shell_script_build_phase)
+      phase_name = 'Clear codesign attributes'
+      script_content = 'if [ -n "$CODESIGNING_FOLDER_PATH" ] && [ -d "$CODESIGNING_FOLDER_PATH" ]; then find "$CODESIGNING_FOLDER_PATH" -exec xattr -d com.apple.FinderInfo {} \; 2>/dev/null; find "$CODESIGNING_FOLDER_PATH" -exec xattr -d com.apple.ResourceFork {} \; 2>/dev/null; find "$CODESIGNING_FOLDER_PATH" -exec xattr -d "com.apple.fileprovider.fpfs#P" {} \; 2>/dev/null; fi'
+      existing_phase = target.shell_script_build_phases.find { |p| p.name == phase_name }
+      if existing_phase
+        existing_phase.shell_script = script_content
+      else
+        phase = target.new_shell_script_build_phase(phase_name)
+        phase.shell_script = script_content
+      end
+    end
+  end
+
+  # Inject a Build Phase at the end of the Runner target to strip extended attributes before signing
+  require 'xcodeproj'
+  project_path = File.join(File.dirname(__FILE__), 'Runner.xcodeproj')
+  project = Xcodeproj::Project.open(project_path)
+  runner_target = project.targets.find { |t| t.name == 'Runner' }
+  if runner_target
+    phase_name = 'Clear codesign attributes'
+    script_content = 'if [ -n "$CODESIGNING_FOLDER_PATH" ] && [ -d "$CODESIGNING_FOLDER_PATH" ]; then find "$CODESIGNING_FOLDER_PATH" -exec xattr -d com.apple.FinderInfo {} \; 2>/dev/null; find "$CODESIGNING_FOLDER_PATH" -exec xattr -d com.apple.ResourceFork {} \; 2>/dev/null; find "$CODESIGNING_FOLDER_PATH" -exec xattr -d "com.apple.fileprovider.fpfs#P" {} \; 2>/dev/null; fi'
+    existing_phase = runner_target.shell_script_build_phases.find { |p| p.name == phase_name }
+    if existing_phase
+      existing_phase.shell_script = script_content
+      project.save
+    else
+      phase = runner_target.new_shell_script_build_phase(phase_name)
+      phase.shell_script = script_content
+      project.save
+    end
   end
 end
