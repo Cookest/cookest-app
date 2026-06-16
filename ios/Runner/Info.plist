@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Cookest uses your location to show supermarkets near you on the map.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Cookest uses the camera to scan product barcodes and groceries.</string>
 </dict>
 </plist>
