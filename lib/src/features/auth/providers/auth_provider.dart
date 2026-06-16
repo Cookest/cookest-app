@@ -14,14 +14,20 @@ class AuthState {
   final bool isLoading;
   final String? error;
 
+  /// Local override set the moment onboarding is completed, before a fresh
+  /// access token (with `onboarding_completed: true`) is issued on next refresh.
+  /// Prevents the router from bouncing the user back to `/onboarding`.
+  final bool onboardingDone;
+
   AuthState({
     this.accessToken,
     this.isLoading = false,
     this.error,
+    this.onboardingDone = false,
   });
 
   bool get isAuthenticated => accessToken != null;
-  
+
   String? get tier {
     if (accessToken == null) return null;
     try {
@@ -32,15 +38,30 @@ class AuthState {
     }
   }
 
+  /// Whether the user has finished onboarding. True if either the session-local
+  /// override is set or the access token carries `onboarding_completed: true`.
+  bool get onboardingCompleted {
+    if (onboardingDone) return true;
+    if (accessToken == null) return false;
+    try {
+      final payload = JwtDecoder.decode(accessToken!);
+      return payload['onboarding_completed'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   AuthState copyWith({
     String? accessToken,
     bool? isLoading,
     String? error,
+    bool? onboardingDone,
   }) {
     return AuthState(
       accessToken: accessToken ?? this.accessToken,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      onboardingDone: onboardingDone ?? this.onboardingDone,
     );
   }
 }
@@ -62,6 +83,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// [AuthRepository.logout].
   void logout() {
     state = AuthState();
+  }
+
+  /// Marks onboarding as completed for the current session. Called right after
+  /// the onboarding flow is submitted so the router stops gating on it before
+  /// the next token refresh picks up the updated `onboarding_completed` claim.
+  void markOnboardingCompleted() {
+    state = state.copyWith(onboardingDone: true);
   }
 
   /// Sets the loading flag. Used by auth screens to show a spinner

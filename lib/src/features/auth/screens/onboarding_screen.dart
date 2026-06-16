@@ -4,8 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cookest_ui/cookest_ui.dart';
 import 'package:cookest/src/core/theme/app_colors.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../repositories/auth_repository.dart';
+import '../providers/auth_provider.dart';
+import '../../pantry/repositories/inventory_repository.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -42,68 +43,42 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   double _maxTimeMins = 30;
   double _mealFrequency = 7;
 
-  // Step 7 — Taste calibration
-  int _currentCalibrationIndex = 0;
-  final List<Map<String, dynamic>> _likedCalibrationRecipes = [];
+  // Step 7 — Pantry quick-setup
+  // Selected staple names (keys of [_pantryStaples]). Tap to toggle.
+  final Set<String> _selectedPantry = {};
 
-  static final List<Map<String, dynamic>> _calibrationRecipes = [
-    {
-      'id': 'c1',
-      'name': 'Spaghetti Carbonara',
-      'cuisine': 'Italian',
-      'tags': ['pasta', 'creamy', 'quick'],
-      'image': 'https://www.themealdb.com/images/media/meals/llcbn01574260722.jpg',
-    },
-    {
-      'id': 'c2',
-      'name': 'Chicken Tikka Masala',
-      'cuisine': 'Indian',
-      'tags': ['curry', 'spicy', 'aromatic'],
-      'image': 'https://www.themealdb.com/images/media/meals/wyxwsp1486979827.jpg',
-    },
-    {
-      'id': 'c3',
-      'name': 'Beef Tacos',
-      'cuisine': 'Mexican',
-      'tags': ['tacos', 'hearty', 'quick'],
-      'image': 'https://www.themealdb.com/images/media/meals/typvxy1468572253.jpg',
-    },
-    {
-      'id': 'c4',
-      'name': 'Salmon Teriyaki',
-      'cuisine': 'Japanese',
-      'tags': ['fish', 'healthy', 'sweet'],
-      'image': 'https://www.themealdb.com/images/media/meals/xxyupu1468262513.jpg',
-    },
-    {
-      'id': 'c5',
-      'name': 'Avocado Toast',
-      'cuisine': 'American',
-      'tags': ['breakfast', 'vegan', 'quick'],
-      'image': 'https://www.themealdb.com/images/media/meals/xqusqy1487348868.jpg',
-    },
-    {
-      'id': 'c6',
-      'name': 'Shakshuka',
-      'cuisine': 'Middle Eastern',
-      'tags': ['eggs', 'vegetarian', 'spicy'],
-      'image': 'https://www.themealdb.com/images/media/meals/g373701542403684.jpg',
-    },
-    {
-      'id': 'c7',
-      'name': 'Pad Thai',
-      'cuisine': 'Thai',
-      'tags': ['noodles', 'nutty', 'quick'],
-      'image': 'https://www.themealdb.com/images/media/meals/uuuspp1511297945.jpg',
-    },
-    {
-      'id': 'c8',
-      'name': 'Greek Salad',
-      'cuisine': 'Greek',
-      'tags': ['salad', 'fresh', 'healthy'],
-      'image': 'https://www.themealdb.com/images/media/meals/v3grxy1510743355.jpg',
-    },
+  /// Common pantry staples shown as tap-to-toggle tiles for a fast setup.
+  /// Tuple: (emoji, name, quantity, unit, storageLocation).
+  static const List<(String, String, double, String, String)> _pantryStaples = [
+    ('🥛', 'Milk', 1.0, 'l', 'fridge'),
+    ('🥚', 'Eggs', 6.0, 'pcs', 'fridge'),
+    ('🧀', 'Cheese', 200.0, 'g', 'fridge'),
+    ('🧈', 'Butter', 250.0, 'g', 'fridge'),
+    ('🍞', 'Bread', 1.0, 'pack', 'pantry'),
+    ('🍚', 'Rice', 1.0, 'kg', 'pantry'),
+    ('🍝', 'Pasta', 500.0, 'g', 'pantry'),
+    ('🧅', 'Onion', 3.0, 'pcs', 'pantry'),
+    ('🧄', 'Garlic', 1.0, 'pack', 'pantry'),
+    ('🍅', 'Tomatoes', 4.0, 'pcs', 'fridge'),
+    ('🥔', 'Potatoes', 1.0, 'kg', 'pantry'),
+    ('🥕', 'Carrots', 500.0, 'g', 'fridge'),
+    ('🫑', 'Peppers', 3.0, 'pcs', 'fridge'),
+    ('🥬', 'Salad', 1.0, 'pack', 'fridge'),
+    ('🍗', 'Chicken', 500.0, 'g', 'fridge'),
+    ('🥩', 'Beef', 500.0, 'g', 'fridge'),
+    ('🐟', 'Fish', 300.0, 'g', 'fridge'),
+    ('🫒', 'Olive Oil', 500.0, 'ml', 'pantry'),
+    ('🧂', 'Salt', 1.0, 'pack', 'pantry'),
+    ('🫘', 'Beans', 400.0, 'g', 'pantry'),
+    ('🥫', 'Canned Tomatoes', 2.0, 'can', 'pantry'),
+    ('🧇', 'Flour', 1.0, 'kg', 'pantry'),
   ];
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   Future<void> _submit() async {
     setState(() => _isLoading = true);
@@ -119,10 +94,31 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         'weekly_budget': _weeklyBudget,
         'preferred_time_per_meal_min': _maxTimeMins.round(),
         'meal_frequency': _mealFrequency.round(),
-        'liked_recipe_ids':
-            _likedCalibrationRecipes.map((r) => r['id']).toList(),
       });
-      if (mounted) context.go('/');
+
+      // Seed the pantry with the staples the user selected (best-effort —
+      // a failure here must not block finishing onboarding).
+      if (_selectedPantry.isNotEmpty) {
+        final items = _pantryStaples
+            .where((s) => _selectedPantry.contains(s.$2))
+            .map((s) => {
+                  'name': s.$2,
+                  'quantity': s.$3,
+                  'unit': s.$4,
+                  'storage_location': s.$5,
+                })
+            .toList();
+        try {
+          await ref.read(inventoryRepositoryProvider).bulkAdd(items);
+        } catch (_) {
+          // ignore — pantry can be filled later from the Pantry tab
+        }
+      }
+
+      if (mounted) {
+        ref.read(authProvider.notifier).markOnboardingCompleted();
+        context.go('/');
+      }
     } catch (e) {
       if (mounted) setState(() => _errorMessage = e.toString());
     } finally {
@@ -138,24 +134,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  void _onCalibrationAction(bool liked) {
-    if (_currentCalibrationIndex >= _calibrationRecipes.length) return;
-    if (liked) {
-      _likedCalibrationRecipes.add(
-        Map<String, dynamic>.from(_calibrationRecipes[_currentCalibrationIndex]),
-      );
-    }
-    setState(() => _currentCalibrationIndex++);
-    if (_currentCalibrationIndex >= _calibrationRecipes.length) {
-      _submit();
-    }
-  }
-
   Widget _buildChip(String label, String value, Set<String> selectedSet) {
     return FilterChip(
       label: Text(label, style: GoogleFonts.inter(fontSize: 14)),
       selected: selectedSet.contains(value),
-      selectedColor: CookestTokens.colorPrimaryDEFAULT.withOpacity(0.2),
+      selectedColor: CookestTokens.colorPrimaryDEFAULT.withValues(alpha: 0.2),
       checkmarkColor: CookestTokens.colorPrimaryDEFAULT,
       onSelected: (v) => setState(
         () => v ? selectedSet.add(value) : selectedSet.remove(value),
@@ -165,9 +148,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isCalibration = _currentPage == 6;
-    final calibrationDone = _currentCalibrationIndex >= 3 ||
-        _currentCalibrationIndex >= _calibrationRecipes.length;
+    final isLastStep = _currentPage == 6;
 
     return Scaffold(
       backgroundColor: context.appBackground,
@@ -235,14 +216,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       child: const Text('Back'),
                     ),
                   const Spacer(),
-                  if (!isCalibration && _currentPage < 6)
+                  if (!isLastStep)
                     CkButton(
                       onPressed: () => _goTo(_currentPage + 1),
                       child: const Text('Next'),
                     ),
-                  if (isCalibration &&
-                      calibrationDone &&
-                      _currentCalibrationIndex < _calibrationRecipes.length)
+                  if (isLastStep)
                     CkButton(
                       onPressed: _submit,
                       loading: _isLoading,
@@ -628,216 +607,92 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  // ── Step 7: Taste calibration ──────────────────────────────────────────────
+  // ── Step 7: Pantry quick-setup ─────────────────────────────────────────────
 
   Widget _buildPage6() {
-    final allDone = _currentCalibrationIndex >= _calibrationRecipes.length;
-
-    if (allDone) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('🎉', style: TextStyle(fontSize: 72)),
-              const SizedBox(height: 20),
-              Text(
-                'All done!',
-                style: GoogleFonts.playfairDisplay(
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                  color: context.appHeading,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                "We've learned your style.\nTap Finish to start cooking.",
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                    fontSize: 16, color: context.appMuted, height: 1.5),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final current = _calibrationRecipes[_currentCalibrationIndex];
-    final hasNext = _currentCalibrationIndex + 1 < _calibrationRecipes.length;
-    final next =
-        hasNext ? _calibrationRecipes[_currentCalibrationIndex + 1] : null;
-    final tags = (current['tags'] as List).cast<String>();
-    final remaining = _calibrationRecipes.length - _currentCalibrationIndex;
-
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Swipe to calibrate your taste',
+            "What's in your kitchen?",
             style: GoogleFonts.playfairDisplay(
-              fontSize: 26,
+              fontSize: 28,
               fontWeight: FontWeight.bold,
               color: context.appHeading,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Text(
-            "Like or skip a few recipes — we'll learn your style",
-            style: GoogleFonts.inter(fontSize: 14, color: context.appMuted),
+            'Tap the staples you already have — we use this to suggest meals '
+            'and build smarter shopping lists. You can refine it anytime.',
+            style: GoogleFonts.inter(
+                fontSize: 14, color: context.appMuted, height: 1.4),
           ),
           const SizedBox(height: 20),
-
-          // Card stack
-          SizedBox(
-            height: 300,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                if (next != null)
-                  Transform.translate(
-                    offset: const Offset(0, -8),
-                    child: Transform.scale(
-                      scale: 0.95,
-                      child: _buildCalibrationCard(next, isBack: true),
-                    ),
-                  ),
-                _buildCalibrationCard(current, isBack: false),
-              ],
-            ),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children:
+                _pantryStaples.map((s) => _buildPantryTile(s)).toList(),
           ),
           const SizedBox(height: 16),
-
-          // Tags
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: tags
-                .map(
-                  (tag) => Chip(
-                    label:
-                        Text(tag, style: GoogleFonts.inter(fontSize: 12)),
-                    padding: EdgeInsets.zero,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 20),
-
-          // Love / Skip buttons
-          Row(
-            children: [
-              Expanded(
-                child: CkButton(
-                  variant: CkButtonVariant.secondary,
-                  onPressed: () => _onCalibrationAction(false),
-                  child: const Text('❌  Skip'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: CkButton(
-                  variant: CkButtonVariant.primary,
-                  onPressed: () => _onCalibrationAction(true),
-                  child: const Text('❤️  Love it'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Skip all + counter row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              TextButton(
-                onPressed: () {
-                  setState(() =>
-                      _currentCalibrationIndex = _calibrationRecipes.length);
-                  _submit();
-                },
-                child: Text(
-                  'Skip all',
-                  style:
-                      GoogleFonts.inter(fontSize: 13, color: context.appMuted),
-                ),
-              ),
-              Text(
-                '$remaining left',
-                style: GoogleFonts.inter(fontSize: 12, color: context.appMuted),
-              ),
-            ],
+          Text(
+            _selectedPantry.isEmpty
+                ? 'Nothing selected — that\'s OK, you can add items later.'
+                : '${_selectedPantry.length} item${_selectedPantry.length == 1 ? '' : 's'} selected',
+            style: GoogleFonts.inter(fontSize: 13, color: context.appMuted),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCalibrationCard(
-    Map<String, dynamic> recipe, {
-    required bool isBack,
-  }) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          CachedNetworkImage(
-            imageUrl: recipe['image'] as String,
-            fit: BoxFit.cover,
-            placeholder: (context, url) =>
-                Container(color: context.appSurface),
-            errorWidget: (context, url, error) => Container(
-              color: context.appSurface,
-              child: Icon(Icons.restaurant, size: 48, color: context.appMuted),
-            ),
+  Widget _buildPantryTile((String, String, double, String, String) staple) {
+    final name = staple.$2;
+    final selected = _selectedPantry.contains(name);
+    return GestureDetector(
+      onTap: () => setState(() => selected
+          ? _selectedPantry.remove(name)
+          : _selectedPantry.add(name)),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected
+              ? CookestTokens.colorPrimaryDEFAULT.withValues(alpha: 0.15)
+              : context.appSurface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected
+                ? CookestTokens.colorPrimaryDEFAULT
+                : context.appBorder,
+            width: selected ? 2 : 1,
           ),
-          // Gradient overlay
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.transparent,
-                  Colors.black.withOpacity(0.72),
-                ],
-                stops: const [0.45, 1.0],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(staple.$1, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 6),
+            Text(
+              name,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                color: selected
+                    ? CookestTokens.colorPrimaryDEFAULT
+                    : context.appHeading,
               ),
             ),
-          ),
-          // Text overlay (front card only)
-          if (!isBack)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 16,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    recipe['name'] as String,
-                    style: GoogleFonts.playfairDisplay(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    recipe['cuisine'] as String,
-                    style:
-                        GoogleFonts.inter(fontSize: 13, color: Colors.white70),
-                  ),
-                ],
-              ),
-            ),
-        ],
+            if (selected) ...[
+              const SizedBox(width: 6),
+              Icon(Icons.check_circle,
+                  size: 16, color: CookestTokens.colorPrimaryDEFAULT),
+            ],
+          ],
+        ),
       ),
     );
   }

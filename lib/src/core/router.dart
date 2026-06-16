@@ -36,7 +36,11 @@ final _shellNavigatorKey = GlobalKey<NavigatorState>();
 ///
 /// Auth guard redirect logic:
 /// - Unauthenticated users on a protected route → `/login`.
-/// - Authenticated users on `/login` or `/register` → `/`.
+/// - Authenticated users on `/login` or `/register` → `/onboarding` if their
+///   onboarding is incomplete, otherwise `/`.
+/// - Authenticated users who haven't finished onboarding are forced to
+///   `/onboarding` from any protected route (prevents skipping it by killing
+///   the app mid-flow).
 /// - `/splash` bypasses all guards.
 /// - Demo mode (`AppConfig.isDemoMode`) disables all guards for screenshot capture.
 ///
@@ -49,17 +53,25 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final authState = ref.read(authProvider);
       final isAuthenticated = authState.isAuthenticated;
-      final isLoggingIn =
-          state.matchedLocation == '/login' ||
-          state.matchedLocation == '/register';
-      final isSplash = state.matchedLocation == '/splash';
+      final loc = state.matchedLocation;
+      final isLoggingIn = loc == '/login' || loc == '/register';
+      final isSplash = loc == '/splash';
+      final isOnboarding = loc == '/onboarding';
 
       // Demo mode for screenshot capture — skip all auth guards
       if (AppConfig.isDemoMode) return null;
 
       if (isSplash) return null;
       if (!isAuthenticated && !isLoggingIn) return '/login';
-      if (isAuthenticated && isLoggingIn) return '/';
+
+      // Gate the app on onboarding completion for authenticated users.
+      final needsOnboarding =
+          isAuthenticated && !authState.onboardingCompleted;
+
+      if (isAuthenticated && isLoggingIn) {
+        return needsOnboarding ? '/onboarding' : '/';
+      }
+      if (needsOnboarding && !isOnboarding) return '/onboarding';
       return null;
     },
     routes: [
