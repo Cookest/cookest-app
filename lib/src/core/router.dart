@@ -23,6 +23,7 @@ import '../features/subscription/screens/paywall_screen.dart';
 import '../features/recipes/screens/recipe_detail_screen.dart';
 import '../features/recipes/screens/create_recipe_screen.dart';
 import '../features/pantry/screens/grocery_scan_screen.dart';
+import '../features/pantry/screens/barcode_scan_screen.dart';
 import '../features/meal_plan/screens/recipe_discover_screen.dart';
 import '../features/stores/screens/stores_map_screen.dart';
 import '../features/stores/screens/store_detail_screen.dart';
@@ -97,6 +98,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/grocery-scan',
         builder: (context, state) => const GroceryScanScreen(),
+      ),
+      GoRoute(
+        path: '/barcode-scan',
+        builder: (context, state) => const BarcodeScanScreen(),
       ),
       GoRoute(
         path: '/profile',

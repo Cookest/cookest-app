@@ -113,6 +113,37 @@ class InventoryRepository {
         .map((i) => InventoryItem.fromJson(i as Map<String, dynamic>))
         .toList();
   }
+
+  /// Resolve a scanned barcode via FatSecret and add it to the pantry.
+  Future<void> addByBarcode(
+    String barcode,
+    double quantity,
+    String unit, {
+    String? storageLocation,
+  }) async {
+    await _dio.post('/api/inventory/barcode', data: {
+      'barcode': barcode,
+      'quantity': quantity,
+      'unit': unit,
+      if (storageLocation != null) 'storage_location': storageLocation,
+    });
+  }
+
+  /// Manually use up part of a pantry item.
+  Future<void> consumeItem(String id, double quantity) async {
+    await _dio.post('/api/inventory/$id/consume', data: {'quantity': quantity});
+  }
+
+  /// Mark a recipe cooked — the backend deducts ingredients from the pantry.
+  Future<void> cookRecipe(String recipeId, int servingsMade) async {
+    await _dio.post('/api/recipes/$recipeId/cook',
+        data: {'servings_made': servingsMade});
+  }
+
+  /// Undo a cook, restoring the deducted inventory.
+  Future<void> undoCook(String historyId) async {
+    await _dio.post('/api/cooking-history/$historyId/undo');
+  }
 }
 
 final inventoryRepositoryProvider = Provider<InventoryRepository>((ref) {

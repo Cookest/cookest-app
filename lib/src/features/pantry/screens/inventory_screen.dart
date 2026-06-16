@@ -54,6 +54,16 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     }
   }
 
+  Future<void> _openBarcodeScan() async {
+    setState(() => _fabOpen = false);
+    final added = await context.push<bool>('/barcode-scan');
+    if (added == true) {
+      ref.invalidate(inventoryListProvider);
+      ref.invalidate(expiringCountProvider);
+      ref.invalidate(recipeSuggestionsProvider);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final inventoryAsync = ref.watch(inventoryListProvider);
@@ -328,6 +338,12 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
             label: 'Scan groceries',
             icon: LucideIcons.scanLine,
             onPressed: _openScanScreen,
+          ),
+          const SizedBox(height: 10),
+          _MiniButton(
+            label: 'Scan barcode',
+            icon: LucideIcons.scanLine,
+            onPressed: _openBarcodeScan,
           ),
           const SizedBox(height: 10),
         ],
