@@ -27,6 +27,7 @@ import '../features/pantry/screens/barcode_scan_screen.dart';
 import '../features/meal_plan/screens/recipe_discover_screen.dart';
 import '../features/stores/screens/stores_map_screen.dart';
 import '../features/stores/screens/store_detail_screen.dart';
+import '../features/nutrition/screens/what_to_buy_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -102,6 +103,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/barcode-scan',
         builder: (context, state) => const BarcodeScanScreen(),
+      ),
+      GoRoute(
+        path: '/what-to-buy',
+        builder: (context, state) => const WhatToBuyScreen(),
       ),
       GoRoute(
         path: '/profile',

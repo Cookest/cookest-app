@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:go_router/go_router.dart';
 import 'package:cookest_ui/cookest_ui.dart';
 import 'package:cookest/src/core/theme/app_colors.dart';
 import '../repositories/shopping_repository.dart';
@@ -69,6 +70,12 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
           ),
         ),
         actions: [
+          IconButton(
+            tooltip: 'What to buy',
+            icon: const Icon(LucideIcons.sparkles, size: 18),
+            color: CookestTokens.colorPrimaryDEFAULT,
+            onPressed: () => context.push('/what-to-buy'),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: CkButton(
