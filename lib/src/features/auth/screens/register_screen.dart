@@ -164,7 +164,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             if (_errorMessage != null) ...[
               CkAlert(
                 variant: CkAlertVariant.error,
-                title: 'Sign in failed',
+                title: 'Registration failed',
                 dismissible: true,
                 onDismiss: () => setState(() => _errorMessage = null),
                 child: Text(_errorMessage!),
@@ -200,7 +200,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: context.appBackground.withOpacity(0.5),
+                color: context.appBackground.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
