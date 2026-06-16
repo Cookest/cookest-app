@@ -24,6 +24,8 @@ import '../features/recipes/screens/recipe_detail_screen.dart';
 import '../features/recipes/screens/create_recipe_screen.dart';
 import '../features/pantry/screens/grocery_scan_screen.dart';
 import '../features/meal_plan/screens/recipe_discover_screen.dart';
+import '../features/stores/screens/stores_map_screen.dart';
+import '../features/stores/screens/store_detail_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -108,6 +110,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/discover',
         builder: (context, state) => const RecipeDiscoverScreen(),
       ),
+      GoRoute(
+        path: '/stores/:id',
+        builder: (context, state) =>
+            StoreDetailScreen(storeId: state.pathParameters['id']!),
+      ),
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
         builder: (context, state, child) =>
@@ -130,6 +137,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/groceries',
             builder: (context, state) => const ShoppingListScreen(),
           ),
+          GoRoute(
+            path: '/stores',
+            builder: (context, state) => const StoresMapScreen(),
+          ),
         ],
       ),
     ],
@@ -150,6 +161,7 @@ class _AppShell extends StatelessWidget {
     (icon: LucideIcons.bookOpen, label: 'Recipes', path: '/recipes'),
     (icon: LucideIcons.package, label: 'Pantry', path: '/pantry'),
     (icon: LucideIcons.shoppingCart, label: 'Groceries', path: '/groceries'),
+    (icon: LucideIcons.mapPin, label: 'Stores', path: '/stores'),
   ];
 
   int get _currentIndex {
