@@ -5,6 +5,10 @@ class AppConfig {
   static const String prodBaseUrl = 'https://api.cookest.app'; // Placeholder
 
   static String get baseUrl => devBaseUrl; // Switch logic here for flavors
+
+  /// Public marketing/web app that hosts share links (e.g. meal-vote pages).
+  static const String publicWebUrl = 'https://cookest.app';
+
   static const bool mockDemoMode = bool.fromEnvironment(
     'MOCK_DEMO',
     defaultValue: false,
