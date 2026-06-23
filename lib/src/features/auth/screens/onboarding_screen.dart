@@ -630,7 +630,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             color: selected
                 ? CookestTokens.colorPrimaryDEFAULT
                 : context.appBorder,
-            width: selected ? 2 : 1,
+            width: 1.5,
           ),
         ),
         child: Row(
@@ -642,17 +642,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               name,
               style: GoogleFonts.inter(
                 fontSize: 14,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                fontWeight: FontWeight.w500,
                 color: selected
                     ? CookestTokens.colorPrimaryDEFAULT
                     : context.appHeading,
               ),
             ),
-            if (selected) ...[
-              const SizedBox(width: 6),
-              Icon(Icons.check_circle,
-                  size: 16, color: CookestTokens.colorPrimaryDEFAULT),
-            ],
           ],
         ),
       ),
