@@ -7,13 +7,23 @@ class BuySuggestion {
   final String item;
   final String reason;
   final String? nutrient;
+  final double? amount;
+  final String? unit;
 
-  const BuySuggestion({required this.item, required this.reason, this.nutrient});
+  const BuySuggestion({
+    required this.item, 
+    required this.reason, 
+    this.nutrient,
+    this.amount,
+    this.unit,
+  });
 
   factory BuySuggestion.fromJson(Map<String, dynamic> j) => BuySuggestion(
         item: j['item']?.toString() ?? '',
         reason: j['reason']?.toString() ?? '',
         nutrient: j['nutrient']?.toString(),
+        amount: (j['amount'] as num?)?.toDouble(),
+        unit: j['unit']?.toString(),
       );
 }
 

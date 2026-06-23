@@ -91,6 +91,57 @@ class WhatToBuyScreen extends ConsumerWidget {
                             Text(s.reason,
                                 style: TextStyle(
                                     fontSize: 13, color: context.appMuted)),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                if (s.amount != null && s.unit != null)
+                                  Text(
+                                    '${s.amount == s.amount!.truncateToDouble() ? s.amount!.toInt() : s.amount} ${s.unit}',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                      color: context.appHeading,
+                                    ),
+                                  )
+                                else
+                                  Text(
+                                    '1 pcs',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                      color: context.appHeading,
+                                    ),
+                                  ),
+                                const Spacer(),
+                                CkButton(
+                                  size: CkButtonSize.sm,
+                                  variant: CkButtonVariant.secondary,
+                                  iconLeft: const Icon(LucideIcons.plus, size: 16),
+                                  onPressed: () async {
+                                    try {
+                                      await ref.read(shoppingRepositoryProvider).addItem(
+                                        s.item,
+                                        s.amount ?? 1.0,
+                                        s.unit ?? 'pcs',
+                                      );
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Added ${s.item} to groceries')),
+                                        );
+                                        ref.invalidate(shoppingListProvider);
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Failed to add ${s.item}: $e')),
+                                        );
+                                      }
+                                    }
+                                  },
+                                  child: const Text('Add'),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
