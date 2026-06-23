@@ -179,11 +179,12 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   // ── Empty state ───────────────────────────────────────────────────────────
 
   Widget _buildEmptyState() {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
           Container(
             width: 120,
             height: 120,
@@ -238,10 +239,10 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   // ── Loading skeleton ──────────────────────────────────────────────────────
 
   Widget _buildLoading() {
-    return const Padding(
-      padding: EdgeInsets.all(16),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
       child: Column(
-        children: [
+        children: const [
           CkSkeletonCard(),
           SizedBox(height: 12),
           CkSkeletonCard(),
@@ -708,7 +709,13 @@ class _InventoryItemTile extends ConsumerWidget {
                 // Let's add it via API and delete the old one, or just update.
                 // For safety, let's assume the API has update or addItem handles upsert.
                 Navigator.pop(ctx);
-                await ref.read(inventoryRepositoryProvider).addItem(item.name, newQty, item.unit, item.location, item.expiryDate);
+                await ref.read(inventoryRepositoryProvider).addItem({
+                  'name': item.name,
+                  'quantity': newQty,
+                  'unit': item.unit,
+                  'storage_location': item.location,
+                  if (item.expiryDate != null) 'expiry_date': item.expiryDate!.toIso8601String(),
+                });
                 // Also delete old item? No, the addItem by name usually upserts or adds to existing in many systems, 
                 // but actually let's delete and re-add.
                 await ref.read(inventoryRepositoryProvider).deleteItem(item.id);

@@ -145,33 +145,35 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
               data: (items) {
                 if (items.isEmpty) {
                   return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: CookestTokens.colorPrimaryDEFAULT.withValues(alpha: 0.08),
-                            shape: BoxShape.circle,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: CookestTokens.colorPrimaryDEFAULT.withValues(alpha: 0.08),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(LucideIcons.shoppingCart,
+                                size: 48, color: CookestTokens.colorPrimaryDEFAULT),
                           ),
-                          child: Icon(LucideIcons.shoppingCart,
-                              size: 48, color: CookestTokens.colorPrimaryDEFAULT),
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          'Your list is empty',
-                          style: GoogleFonts.playfairDisplay(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: context.appHeading,
+                          const SizedBox(height: 24),
+                          Text(
+                            'Your list is empty',
+                            style: GoogleFonts.playfairDisplay(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: context.appHeading,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Add items above or sync from your meal plan',
-                          style: TextStyle(color: context.appMuted),
-                        ),
-                      ],
+                          const SizedBox(height: 8),
+                          Text(
+                            'Add items above or sync from your meal plan',
+                            style: TextStyle(color: context.appMuted),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 }

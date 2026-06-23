@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../shopping_list/repositories/shopping_repository.dart';
 import '../repositories/nutrition_repository.dart';
 
 /// AI-suggested groceries that fill nutritional gaps, grounded in the
