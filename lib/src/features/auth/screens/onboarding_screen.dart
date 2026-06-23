@@ -40,8 +40,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   String _cookingSkill = 'intermediate';
   double _householdSize = 2;
   double _weeklyBudget = 100;
-  double _maxTimeMins = 30;
-  double _mealFrequency = 7;
 
   // Step 7 — Pantry quick-setup
   // Selected staple names (keys of [_pantryStaples]). Tap to toggle.
@@ -92,8 +90,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         'preferred_cuisines': _preferredCuisines.toList(),
         'health_goals': _healthGoals.toList(),
         'weekly_budget': _weeklyBudget,
-        'preferred_time_per_meal_min': _maxTimeMins.round(),
-        'meal_frequency': _mealFrequency.round(),
       });
 
       // Seed the pantry with the staples the user selected (best-effort —
@@ -567,46 +563,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             label: '€/week',
             showValue: true,
             onChanged: (v) => setState(() => _weeklyBudget = v),
-          ),
-          const SizedBox(height: 28),
-
-          // Max time per meal
-          Text(
-            'Max time per meal',
-            style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: context.appHeading),
-          ),
-          const SizedBox(height: 8),
-          CkSlider(
-            value: _maxTimeMins,
-            min: 10,
-            max: 120,
-            step: 5,
-            label: 'min',
-            showValue: true,
-            onChanged: (v) => setState(() => _maxTimeMins = v),
-          ),
-          const SizedBox(height: 28),
-
-          // Meal frequency
-          Text(
-            'Meals cooked at home per week',
-            style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: context.appHeading),
-          ),
-          const SizedBox(height: 8),
-          CkSlider(
-            value: _mealFrequency,
-            min: 1,
-            max: 21,
-            step: 1,
-            label: 'meals/week',
-            showValue: true,
-            onChanged: (v) => setState(() => _mealFrequency = v),
           ),
         ],
       ),

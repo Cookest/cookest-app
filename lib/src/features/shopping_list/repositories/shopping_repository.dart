@@ -26,7 +26,20 @@ class ShoppingRepository {
   }
 
   Future<void> syncFromPlan() async {
-    await _dio.post('/api/shopping-list/sync', data: {});
+    // 1. Fetch the ingredients needed for the current meal plan
+    final planResponse = await _dio.get('/api/meal-plans/current/shopping-list');
+    final List planItems = planResponse.data is List ? planResponse.data : [];
+    
+    // 2. Map the response to the format expected by the sync endpoint
+    final itemsToSync = planItems.map((item) => {
+      'ingredient_id': item['ingredient_id'],
+      'name': item['name'],
+      'quantity': item['to_buy_grams'],
+      'unit': 'g', // The backend currently returns 'grams' for everything in this heuristic
+    }).toList();
+
+    // 3. Sync with the shopping list
+    await _dio.post('/api/shopping-list/sync', data: {'items': itemsToSync});
   }
 
   Future<void> addItem(String name, double quantity, String unit) async {

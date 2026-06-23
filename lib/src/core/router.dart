@@ -4,7 +4,7 @@ import 'config.dart';
 import '../features/recipes/screens/food_recipe_detail_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:cookest_ui/cookest_ui.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/auth/screens/splash_screen.dart';
