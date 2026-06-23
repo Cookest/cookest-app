@@ -88,31 +88,44 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(
-          children: [
-            const SizedBox(height: 12),
-            Column(
-              children: [
-                CkInput(
-                  controller: _addItemController,
-                  placeholder: 'Add item...',
-                  fullWidth: true,
-                  onSubmitted: (_) => _addItem(),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Container(
+              decoration: BoxDecoration(
+                color: context.appSurface,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: _addItemController,
+                onSubmitted: (_) => _addItem(),
+                style: TextStyle(color: context.appHeading),
+                decoration: InputDecoration(
+                  hintText: 'Add an item...',
+                  hintStyle: TextStyle(color: context.appMuted),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  suffixIcon: IconButton(
+                    icon: const Icon(LucideIcons.plusCircle, color: CookestTokens.colorPrimaryDEFAULT),
+                    onPressed: _addItem,
+                  ),
                 ),
-                const SizedBox(height: 8),
-                CkButton(
-                  fullWidth: true,
-                  onPressed: _addItem,
-                  child: const Text('Add to Groceries'),
-                ),
-              ],
+              ),
             ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: listAsync.when(
-                loading: () => const Column(
+          ),
+          Expanded(
+            child: listAsync.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
                   children: [
                     CkSkeletonCard(),
                     SizedBox(height: 12),
@@ -121,59 +134,76 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
                     CkSkeletonCard(),
                   ],
                 ),
-                error: (e, _) => CkAlert(
+              ),
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.all(16),
+                child: CkAlert(
                   variant: CkAlertVariant.error,
                   child: Text('Failed to load shopping list: $e'),
                 ),
-                data: (items) {
-                  if (items.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(LucideIcons.shoppingCart,
-                              size: 48, color: context.appMuted),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Your shopping list is empty',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                    color: context.appHeading),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Add items or sync from your meal plan',
-                            style: TextStyle(
-                                color: context.appMuted),
-                          ),
-                          const SizedBox(height: 8),
-                          CkButton(
-                            size: CkButtonSize.sm,
-                            onPressed: _sync,
-                            child: const Text('Sync from Meal Plan'),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  final sorted = [...items]..sort((a, b) {
-                      if (a.isChecked == b.isChecked) return 0;
-                      return a.isChecked ? 1 : -1;
-                    });
-
-                  return ListView.builder(
-                    itemCount: sorted.length,
-                    itemBuilder: (context, index) =>
-                        _buildItemRow(sorted[index]),
-                  );
-                },
               ),
+              data: (items) {
+                if (items.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: CookestTokens.colorPrimaryDEFAULT.withValues(alpha: 0.08),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(LucideIcons.shoppingCart,
+                              size: 48, color: CookestTokens.colorPrimaryDEFAULT),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Your list is empty',
+                          style: GoogleFonts.playfairDisplay(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: context.appHeading,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Add items above or sync from your meal plan',
+                          style: TextStyle(color: context.appMuted),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final unchecked = items.where((i) => !i.isChecked).toList();
+                final checked = items.where((i) => i.isChecked).toList();
+
+                return ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  children: [
+                    if (unchecked.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8, left: 4),
+                        child: Text('To Buy', style: TextStyle(fontWeight: FontWeight.w600, color: context.appHeading)),
+                      ),
+                      ...unchecked.map((item) => _buildItemRow(item)),
+                    ],
+                    if (checked.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8, left: 4),
+                        child: Text('Completed', style: TextStyle(fontWeight: FontWeight.w600, color: context.appMuted)),
+                      ),
+                      ...checked.map((item) => _buildItemRow(item)),
+                    ],
+                    const SizedBox(height: 32),
+                  ],
+                );
+              },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -183,6 +213,7 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
       key: Key(item.id),
       direction: DismissDirection.endToStart,
       background: Container(
+        margin: const EdgeInsets.only(bottom: 8),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         decoration: BoxDecoration(
@@ -197,19 +228,70 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
       },
       child: Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: CkCard(
-          padding: CkCardPadding.sm,
-          child: CkToggle(
-            value: item.isChecked,
-            label: item.name,
-            onChanged: (val) async {
-              try {
-                await ref
-                    .read(shoppingRepositoryProvider)
-                    .toggleCheck(item.id, val);
-                ref.invalidate(shoppingListProvider);
-              } catch (_) {}
-            },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: context.appSurface,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: item.isChecked ? context.appBorder : Colors.transparent,
+              width: 1,
+            ),
+            boxShadow: item.isChecked
+                ? []
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () async {
+                try {
+                  await ref.read(shoppingRepositoryProvider).toggleCheck(item.id, !item.isChecked);
+                  ref.invalidate(shoppingListProvider);
+                } catch (_) {}
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: item.isChecked ? CookestTokens.colorPrimaryDEFAULT : context.appBorder,
+                          width: 2,
+                        ),
+                        color: item.isChecked ? CookestTokens.colorPrimaryDEFAULT : Colors.transparent,
+                      ),
+                      child: item.isChecked
+                          ? const Icon(LucideIcons.check, size: 14, color: Colors.white)
+                          : null,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        item.name,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: item.isChecked ? context.appMuted : context.appHeading,
+                          decoration: item.isChecked ? TextDecoration.lineThrough : null,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),
