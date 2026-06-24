@@ -35,8 +35,8 @@ class FoodBrowseRepository {
 
     final data = response.data;
     if (data is Map<String, dynamic>) {
-      // food-api wraps in { recipes: [...], total, page, per_page }
-      if (data['recipes'] is List) {
+      // food-api wraps in { data: [...], total, page, per_page } (or recipes: [...])
+      if (data['data'] is List || data['recipes'] is List) {
         return FoodRecipePage.fromJson(data);
       }
       // fallback: bare list

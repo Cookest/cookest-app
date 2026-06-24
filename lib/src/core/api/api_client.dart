@@ -1,13 +1,27 @@
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:cookie_jar/cookie_jar.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import 'mock_api_interceptor.dart';
 
-final cookieJarProvider = Provider<CookieJar>((ref) => CookieJar());
+late final CookieJar globalCookieJar;
+
+Future<void> initCookieJar() async {
+  if (!kIsWeb) {
+    final appDocDir = await getApplicationDocumentsDirectory();
+    globalCookieJar = PersistCookieJar(
+      storage: FileStorage('${appDocDir.path}/.cookies/'),
+    );
+  } else {
+    globalCookieJar = CookieJar();
+  }
+}
+
+final cookieJarProvider = Provider<CookieJar>((ref) => globalCookieJar);
 
 /// Provider holding the current API Base URL reactively.
 final baseUrlProvider = StateProvider<String>((ref) {

@@ -4,9 +4,12 @@ import 'package:cookest_ui/cookest_ui.dart';
 import 'src/core/config.dart';
 import 'src/core/router.dart';
 
+import 'src/core/api/api_client.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppConfig.init();
+  await initCookieJar();
   runApp(
     const ProviderScope(
       child: CookestApp(),

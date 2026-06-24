@@ -72,7 +72,7 @@ class FoodRecipePage {
   });
 
   factory FoodRecipePage.fromJson(Map<String, dynamic> json) {
-    final list = (json['recipes'] as List<dynamic>? ?? [])
+    final list = ((json['data'] ?? json['recipes']) as List<dynamic>? ?? [])
         .map((e) => FoodRecipeListItem.fromJson(e as Map<String, dynamic>))
         .toList();
     return FoodRecipePage(
