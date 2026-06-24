@@ -1,0 +1,84 @@
+name: Release App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+      
+    steps:
+      - name: Checkout app
+        uses: actions/checkout@v4
+        with:
+          path: cookest-app
+          fetch-depth: 0
+
+      - name: Checkout UI components library
+        uses: actions/checkout@v4
+        with:
+          repository: Cookest/cookest-ui-components-library
+          path: cookest-ui-components-library
+
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: patch
+
+      - name: Update version in pubspec.yaml
+        working-directory: cookest-app
+        run: |
+          VERSION="${{ steps.tag_version.outputs.new_version }}"
+          VERSION="${VERSION#v}"
+          sed -i '' "s/^version: .*/version: ${VERSION}+${{ github.run_number }}/g" pubspec.yaml
+          
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add pubspec.yaml
+          git commit -m "chore: bump version to ${VERSION}+${{ github.run_number }} [skip ci]" || echo "No changes to commit"
+          git push origin HEAD:main
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install dependencies
+        working-directory: cookest-app
+        run: flutter pub get
+
+      - name: Build APK
+        working-directory: cookest-app
+        run: flutter build apk --release
+
+      - name: Build unsigned IPA
+        working-directory: cookest-app
+        run: |
+          flutter build ios --release --no-codesign
+          cd build/ios/iphoneos
+          mkdir Payload
+          mv Runner.app Payload/
+          zip -qq -r -9 app-release.ipa Payload
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag_version.outputs.new_tag }}
+          name: Release ${{ steps.tag_version.outputs.new_tag }}
+          files: |
+            cookest-app/build/app/outputs/flutter-apk/app-release.apk
+            cookest-app/build/ios/iphoneos/app-release.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
