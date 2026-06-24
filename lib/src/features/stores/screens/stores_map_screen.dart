@@ -9,8 +9,7 @@ import '../models/store.dart';
 import '../repositories/location_repository.dart';
 import '../repositories/stores_repository.dart';
 
-/// OpenFreeMap vector style — clean, Apple-Maps-like, and key-free.
-const _mapStyle = 'https://tiles.openfreemap.org/styles/bright';
+// Map styles
 
 class StoresMapScreen extends ConsumerStatefulWidget {
   const StoresMapScreen({super.key});
@@ -23,6 +22,7 @@ class _StoresMapScreenState extends ConsumerState<StoresMapScreen> {
   MapLibreMapController? _controller;
   bool _styleLoaded = false;
   List<NearbyStore>? _markedStores;
+  String? _currentMapStyle;
 
   Future<void> _syncMarkers(List<NearbyStore> stores) async {
     final c = _controller;
@@ -42,6 +42,17 @@ class _StoresMapScreenState extends ConsumerState<StoresMapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final mapStyle = isDark 
+        ? 'https://tiles.openfreemap.org/styles/dark-matter'
+        : 'https://tiles.openfreemap.org/styles/liberty';
+
+    if (_currentMapStyle != null && _currentMapStyle != mapStyle) {
+      _styleLoaded = false;
+      _markedStores = null; // Force redraw on style change
+    }
+    _currentMapStyle = mapStyle;
+
     final positionAsync = ref.watch(currentPositionProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Stores near you')),
@@ -65,7 +76,7 @@ class _StoresMapScreenState extends ConsumerState<StoresMapScreen> {
               SizedBox(
                 height: MediaQuery.of(context).size.height * 0.42,
                 child: MapLibreMap(
-                  styleString: _mapStyle,
+                  styleString: mapStyle,
                   initialCameraPosition: CameraPosition(
                     target: LatLng(pos.lat, pos.lng),
                     zoom: 13,
