@@ -8,6 +8,7 @@ import 'package:cookest/src/core/theme/app_colors.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/config.dart';
 import '../../../core/storage/secure_storage.dart';
+import '../../../core/api/api_client.dart';
 import '../providers/auth_provider.dart';
 import '../repositories/auth_repository.dart';
 
@@ -50,6 +51,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final response = await http.get(uri).timeout(const Duration(seconds: 10));
       if (response.statusCode >= 200 && response.statusCode < 300) {
         await AppConfig.setCustomUrl(url);
+        ref.read(baseUrlProvider.notifier).state = url;
         setState(() {
           _pingLoading = false;
           _showCustomServer = false;

@@ -9,6 +9,11 @@ import 'mock_api_interceptor.dart';
 
 final cookieJarProvider = Provider<CookieJar>((ref) => CookieJar());
 
+/// Provider holding the current API Base URL reactively.
+final baseUrlProvider = StateProvider<String>((ref) {
+  return AppConfig.baseUrl;
+});
+
 /// Constructs and configures the app-wide [Dio] instance.
 ///
 /// Attaches a [CookieManager] (native only) so the server's `httpOnly` refresh
@@ -18,9 +23,10 @@ final cookieJarProvider = Provider<CookieJar>((ref) => CookieJar());
 /// original request is retried with the new token. On failure,
 /// [AuthNotifier.logout] is called to clear state.
 final dioProvider = Provider<Dio>((ref) {
+  final baseUrl = ref.watch(baseUrlProvider);
   final dio = Dio(
     BaseOptions(
-      baseUrl: AppConfig.baseUrl,
+      baseUrl: baseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
     ),
