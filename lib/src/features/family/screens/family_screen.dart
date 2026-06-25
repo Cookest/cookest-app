@@ -250,8 +250,17 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
             style: GoogleFonts.inter(color: context.appMuted)),
         const SizedBox(height: 20),
         ...household.members.map(
-          (m) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+          (m) => Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: context.appSurface.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: context.appBorder.withValues(alpha: 0.4),
+                width: 1,
+              ),
+            ),
             child: Row(
               children: [
                 CircleAvatar(
