@@ -265,7 +265,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
             style: GoogleFonts.inter(color: context.appMuted)),
         const SizedBox(height: 20),
         ...household.members.map((m) {
-          final memberWidget = Container(
+          return Container(
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
@@ -307,36 +307,35 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                   ),
                 ),
                 if (isOwner && m.userId != profile.id)
-                  Icon(LucideIcons.moreVertical, size: 18, color: context.appMuted),
+                  CkContextMenu<String>(
+                    triggerOnTap: true,
+                    items: const [
+                      CkContextMenuItem(
+                        value: 'transfer',
+                        label: 'Transfer Ownership',
+                        icon: Icon(LucideIcons.shieldAlert, size: 16),
+                      ),
+                      CkContextMenuItem(
+                        value: 'kick',
+                        label: 'Remove from Family',
+                        icon: Icon(LucideIcons.userMinus, size: 16, color: Colors.red),
+                      ),
+                    ],
+                    onSelected: (value) {
+                      if (value == 'kick') {
+                        _kickMember(m);
+                      } else if (value == 'transfer') {
+                        _transferOwnership(m);
+                      }
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 12.0, top: 4.0, bottom: 4.0),
+                      child: Icon(LucideIcons.moreVertical, size: 20, color: context.appMuted),
+                    ),
+                  ),
               ],
             ),
           );
-
-          if (isOwner && m.userId != profile.id) {
-            return CkContextMenu<String>(
-              items: const [
-                CkContextMenuItem(
-                  value: 'transfer',
-                  label: 'Transfer Ownership',
-                  icon: Icon(LucideIcons.shieldAlert, size: 16),
-                ),
-                CkContextMenuItem(
-                  value: 'kick',
-                  label: 'Remove from Family',
-                  icon: Icon(LucideIcons.userMinus, size: 16, color: Colors.red),
-                ),
-              ],
-              onSelected: (value) {
-                if (value == 'kick') {
-                  _kickMember(m);
-                } else if (value == 'transfer') {
-                  _transferOwnership(m);
-                }
-              },
-              child: memberWidget,
-            );
-          }
-          return memberWidget;
         }),
         const SizedBox(height: 16),
         CkButton(
