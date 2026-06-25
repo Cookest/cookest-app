@@ -70,7 +70,9 @@ jobs:
 
       - name: Build APK
         working-directory: cookest-app
-        run: flutter build apk --release
+        run: |
+          flutter build apk --release
+          mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/cookest-app.apk
 
       - name: Build unsigned IPA
         working-directory: cookest-app
@@ -79,7 +81,7 @@ jobs:
           cd build/ios/iphoneos
           mkdir Payload
           mv Runner.app Payload/
-          zip -qq -r -9 app-release.ipa Payload
+          zip -qq -r -9 cookest-app.ipa Payload
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -87,7 +89,7 @@ jobs:
           tag_name: ${{ steps.tag_version.outputs.new_tag }}
           name: Release ${{ steps.tag_version.outputs.new_tag }}
           files: |
-            cookest-app/build/app/outputs/flutter-apk/app-release.apk
-            cookest-app/build/ios/iphoneos/app-release.ipa
+            cookest-app/build/app/outputs/flutter-apk/cookest-app.apk
+            cookest-app/build/ios/iphoneos/cookest-app.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
