@@ -81,7 +81,7 @@ class RecipeScore {
         nutritionBalance: (json['nutrition_balance'] as num).toDouble(),
         preferenceMatch: (json['preference_match'] as num).toDouble(),
         palatabilityReason: json['palatability_reason'] as String? ?? '',
-        iterations: (json['iterations'] as num?)?.toInt() ?? 1,
+        iterations: json['iterations'] != null ? int.tryParse(json['iterations'].toString()) ?? 1 : 1,
       );
 
   /// Colour-coded label based on overall score

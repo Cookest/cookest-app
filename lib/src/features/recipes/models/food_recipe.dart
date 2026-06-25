@@ -100,7 +100,7 @@ class FoodRecipeIngredient {
   factory FoodRecipeIngredient.fromJson(Map<String, dynamic> json) {
     return FoodRecipeIngredient(
       name: json['name']?.toString() ?? '',
-      quantity: (json['quantity'] as num?)?.toDouble(),
+      quantity: json['quantity'] != null ? double.tryParse(json['quantity'].toString()) : null,
       unit: json['unit'] as String?,
       note: json['note'] as String?,
     );

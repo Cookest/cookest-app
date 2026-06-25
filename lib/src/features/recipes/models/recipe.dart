@@ -213,7 +213,7 @@ class Recipe {
       isGlutenFree: json['is_gluten_free'] as bool? ?? false,
       isDairyFree: json['is_dairy_free'] as bool? ?? false,
       isNutFree: json['is_nut_free'] as bool? ?? false,
-      matchPct: (json['match_pct'] as num?)?.toDouble(),
+      matchPct: json['match_pct'] != null ? double.tryParse(json['match_pct'].toString()) : null,
       primaryImageUrl: json['primary_image_url']?.toString(),
       images: (json['images'] as List? ?? [])
           .map((e) => RecipeImage.fromJson(e as Map<String, dynamic>))
