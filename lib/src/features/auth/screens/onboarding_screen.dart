@@ -123,6 +123,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _goTo(int page) {
+    FocusScope.of(context).unfocus();
     _pageController.animateToPage(
       page,
       duration: const Duration(milliseconds: 300),
@@ -271,6 +272,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           TextField(
             onChanged: (v) => setState(() => _name = v),
             style: GoogleFonts.inter(fontSize: 16),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) {
+              FocusScope.of(context).unfocus();
+            },
             decoration: InputDecoration(
               hintText: 'What should we call you?',
               hintStyle: GoogleFonts.inter(color: context.appMuted),
