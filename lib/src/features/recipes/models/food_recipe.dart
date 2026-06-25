@@ -263,41 +263,4 @@ class FoodRecipeDetail {
   }
 }
 
-// ── Image generation job result ───────────────────────────────────────────────
 
-enum ImageGenStatus { pending, generating, done, failed }
-
-class ImageGenJobResult {
-  final String jobId;
-  final ImageGenStatus status;
-  final String? imageUrl;
-  final String? error;
-
-  const ImageGenJobResult({
-    required this.jobId,
-    required this.status,
-    this.imageUrl,
-    this.error,
-  });
-
-  bool get isDone => status == ImageGenStatus.done;
-  bool get isFailed => status == ImageGenStatus.failed;
-  bool get isProcessing =>
-      status == ImageGenStatus.pending || status == ImageGenStatus.generating;
-
-  factory ImageGenJobResult.fromJson(Map<String, dynamic> json) {
-    final statusStr = json['status'] as String? ?? 'pending';
-    final status = switch (statusStr) {
-      'done' => ImageGenStatus.done,
-      'failed' => ImageGenStatus.failed,
-      'generating' => ImageGenStatus.generating,
-      _ => ImageGenStatus.pending,
-    };
-    return ImageGenJobResult(
-      jobId: json['job_id'] as String? ?? '',
-      status: status,
-      imageUrl: json['image_url'] as String?,
-      error: json['error'] as String?,
-    );
-  }
-}

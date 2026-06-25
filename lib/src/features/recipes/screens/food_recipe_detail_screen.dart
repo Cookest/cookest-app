@@ -9,29 +9,7 @@ import 'package:cookest/src/core/theme/app_colors.dart';
 import '../repositories/food_browse_repository.dart';
 import '../models/food_recipe.dart';
 
-// ── Image generation state ────────────────────────────────────────────────────
 
-enum _GenState { idle, queued, polling, done }
-
-class _ImageGenNotifier extends StateNotifier<Map<int, String?>> {
-  /// stepIndex → imageUrl (null while pending)
-  _ImageGenNotifier() : super({});
-
-  void setJobMap(Map<int, String?> initial) => state = initial;
-
-  void setImageUrl(int stepIndex, String url) {
-    state = {...state, stepIndex: url};
-  }
-}
-
-final _imageGenProvider =
-    StateNotifierProvider.autoDispose<_ImageGenNotifier, Map<int, String?>>(
-  (ref) => _ImageGenNotifier(),
-);
-
-final _genStateProvider = StateProvider.autoDispose<_GenState>(
-  (ref) => _GenState.idle,
-);
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -71,90 +49,21 @@ class FoodRecipeDetailScreen extends ConsumerWidget {
   }
 }
 
-class _RecipeBody extends ConsumerStatefulWidget {
+class _RecipeBody extends StatefulWidget {
   final FoodRecipeDetail recipe;
   const _RecipeBody({required this.recipe});
 
   @override
-  ConsumerState<_RecipeBody> createState() => _RecipeBodyState();
+  State<_RecipeBody> createState() => _RecipeBodyState();
 }
 
-class _RecipeBodyState extends ConsumerState<_RecipeBody> {
-  Timer? _pollTimer;
-  // jobId → stepIndex for pending jobs
-  Map<String, int> _pendingJobs = {};
-
-  @override
-  void dispose() {
-    _pollTimer?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _startGeneration() async {
-    final repo = ref.read(foodBrowseRepositoryProvider);
-    ref.read(_genStateProvider.notifier).state = _GenState.queued;
-
-    try {
-      final jobMap = await repo.generateStepImages(widget.recipe);
-      // jobMap: stepIndex → jobId
-      _pendingJobs = {for (final e in jobMap.entries) e.value: e.key};
-
-      // Seed notifier with nulls (generating) for all steps
-      ref
-          .read(_imageGenProvider.notifier)
-          .setJobMap({for (final idx in jobMap.keys) idx: null});
-
-      ref.read(_genStateProvider.notifier).state = _GenState.polling;
-      _startPolling(repo);
-    } catch (e) {
-      ref.read(_genStateProvider.notifier).state = _GenState.idle;
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Image generation failed: $e')),
-        );
-      }
-    }
-  }
-
-  void _startPolling(FoodBrowseRepository repo) {
-    _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 6), (_) async {
-      if (_pendingJobs.isEmpty) {
-        _pollTimer?.cancel();
-        ref.read(_genStateProvider.notifier).state = _GenState.done;
-        return;
-      }
-      final toCheck = Map<String, int>.from(_pendingJobs);
-      for (final entry in toCheck.entries) {
-        try {
-          final result = await repo.pollJob(entry.key);
-          if (result.isDone && result.imageUrl != null) {
-            ref
-                .read(_imageGenProvider.notifier)
-                .setImageUrl(entry.value, result.imageUrl!);
-            _pendingJobs.remove(entry.key);
-          } else if (result.isFailed) {
-            _pendingJobs.remove(entry.key);
-          }
-        } catch (_) {
-          // Network hiccup — retry next tick
-        }
-      }
-      if (_pendingJobs.isEmpty && mounted) {
-        _pollTimer?.cancel();
-        ref.read(_genStateProvider.notifier).state = _GenState.done;
-      }
-    });
-  }
+class _RecipeBodyState extends State<_RecipeBody> {
 
   @override
   Widget build(BuildContext context) {
     final heroImage = widget.recipe.imageUrls.isNotEmpty
         ? widget.recipe.imageUrls.first
         : null;
-    final genState = ref.watch(_genStateProvider);
-    final stepImages = ref.watch(_imageGenProvider);
-    final isGenerating = genState == _GenState.queued || genState == _GenState.polling;
 
     return CustomScrollView(
       slivers: [
@@ -347,8 +256,6 @@ class _RecipeBodyState extends ConsumerState<_RecipeBody> {
                   ...widget.recipe.steps.map(
                     (step) => _StepCard(
                       step: step,
-                      imageUrl: stepImages[step.stepNumber - 1],
-                      isGenerating: isGenerating,
                     ),
                   ),
                 ],
@@ -487,20 +394,15 @@ class _NutrientChip extends StatelessWidget {
 
 class _StepCard extends StatelessWidget {
   final FoodRecipeStep step;
-  final String? imageUrl;
-  final bool isGenerating;
 
   const _StepCard({
     required this.step,
-    this.imageUrl,
-    this.isGenerating = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    // If a real image came back from the step data, use it
-    final displayUrl = imageUrl ?? step.imageUrl;
-    final showImageArea = isGenerating || displayUrl != null;
+    final displayUrl = step.imageUrl;
+    final showImageArea = displayUrl != null;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -512,24 +414,19 @@ class _StepCard extends StatelessWidget {
           children: [
             // ── Image area ──────────────────────────────────────────────────
             if (showImageArea)
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 400),
-                child: displayUrl != null
-                    ? ClipRRect(
-                        key: ValueKey(displayUrl),
-                        borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(12)),
-                        child: AspectRatio(
-                          aspectRatio: 16 / 9,
-                          child: CachedNetworkImage(
-                            imageUrl: displayUrl,
-                            fit: BoxFit.cover,
-                            errorWidget: (context, url, err) =>
-                                Container(color: context.appSurface),
-                          ),
-                        ),
-                      )
-                    : _StepImageSkeleton(key: const ValueKey('skeleton')),
+              ClipRRect(
+                key: ValueKey(displayUrl),
+                borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(12)),
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: CachedNetworkImage(
+                    imageUrl: displayUrl,
+                    fit: BoxFit.cover,
+                    errorWidget: (context, url, err) =>
+                        Container(color: context.appSurface),
+                  ),
+                ),
               ),
 
             // ── Step body ───────────────────────────────────────────────────
@@ -590,92 +487,6 @@ class _StepCard extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Skeleton shimmer while image is generating ────────────────────────────────
-
-class _StepImageSkeleton extends StatefulWidget {
-  const _StepImageSkeleton({super.key});
-
-  @override
-  State<_StepImageSkeleton> createState() => _StepImageSkeletonState();
-}
-
-class _StepImageSkeletonState extends State<_StepImageSkeleton>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _anim;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
-    _anim = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius:
-          const BorderRadius.vertical(top: Radius.circular(12)),
-      child: AspectRatio(
-        aspectRatio: 16 / 9,
-        child: AnimatedBuilder(
-          animation: _anim,
-          builder: (ctx, _) {
-            return Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [
-                    context.appSurface,
-                    Color.lerp(
-                      context.appSurface,
-                      context.appSurface.withValues(alpha: 0.4),
-                      _anim.value,
-                    )!,
-                    context.appSurface,
-                  ],
-                  stops: const [0.0, 0.5, 1.0],
-                ),
-              ),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      LucideIcons.sparkles,
-                      size: 22,
-                      color: CookestTokens.colorPrimaryDEFAULT
-                          .withValues(alpha: 0.5),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'A gerar imagem AI…',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: context.appMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
         ),
       ),
     );

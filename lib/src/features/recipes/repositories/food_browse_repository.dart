@@ -59,52 +59,7 @@ class FoodBrowseRepository {
     return FoodRecipeDetail.fromJson(response.data as Map<String, dynamic>);
   }
 
-  /// Trigger AI image generation for all steps of a recipe.
-  /// Returns a map of step_index → job_id.
-  Future<Map<int, String>> generateStepImages(FoodRecipeDetail recipe) async {
-    final steps = recipe.steps
-        .map((s) => {
-              'step_index': s.stepNumber - 1,
-              'step_description': s.instruction,
-            })
-        .toList();
 
-    final response = await _dio.post(
-      '/api/image-gen/recipes/${recipe.id}/steps/batch',
-      data: {
-        'recipe_name': recipe.name,
-        'cuisine': recipe.cuisine,
-        'steps': steps,
-      },
-    );
-
-    final data = response.data as Map<String, dynamic>;
-    final jobs = (data['jobs'] as List<dynamic>? ?? []);
-    return {
-      for (final j in jobs)
-        (j['step_index'] as int): j['job_id'] as String,
-    };
-  }
-
-  /// Generate hero image for a recipe.
-  Future<String> generateHeroImage(FoodRecipeDetail recipe) async {
-    final response = await _dio.post(
-      '/api/image-gen/recipes/${recipe.id}/hero',
-      data: {
-        'recipe_name': recipe.name,
-        'description': recipe.description,
-        'cuisine': recipe.cuisine,
-        'category': recipe.category,
-      },
-    );
-    return (response.data as Map<String, dynamic>)['job_id'] as String;
-  }
-
-  /// Poll a generation job.
-  Future<ImageGenJobResult> pollJob(String jobId) async {
-    final response = await _dio.get('/api/image-gen/jobs/$jobId');
-    return ImageGenJobResult.fromJson(response.data as Map<String, dynamic>);
-  }
 
 }
 

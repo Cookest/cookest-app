@@ -61,10 +61,8 @@ class _MockApiState {
   int _nextMealSlotId = 900;
   int _nextChatSessionId = 1;
   int _nextChatMessageId = 1;
-  int _nextImageJobId = 1;
 
   final Map<int, int> _chatTurns = {};
-  final Map<String, Map<String, dynamic>> _imageJobs = {};
 
   final Map<String, dynamic> _profile = {
     'id': 'demo-user',
@@ -616,56 +614,6 @@ class _MockApiState {
       return _ok(_toBrowseDetail(recipe));
     }
 
-    if (segments.length == 6 &&
-        method == 'POST' &&
-        segments[0] == 'api' &&
-        segments[1] == 'image-gen' &&
-        segments[2] == 'recipes' &&
-        segments[4] == 'steps' &&
-        segments[5] == 'batch') {
-      final data = _asMap(options.data);
-      final steps = (data['steps'] as List<dynamic>? ?? []);
-      final jobs = <Map<String, dynamic>>[];
-      for (final step in steps) {
-        final stepMap = Map<String, dynamic>.from(step as Map);
-        final stepIndex = (stepMap['step_index'] as num?)?.toInt() ?? 0;
-        final jobId = 'job-${_nextImageJobId++}';
-        final imageUrl =
-            'https://picsum.photos/seed/step-${segments[3]}-$stepIndex/800/600';
-        _imageJobs[jobId] = {
-          'job_id': jobId,
-          'status': 'done',
-          'image_url': imageUrl,
-          'error': null,
-        };
-        jobs.add({'step_index': stepIndex, 'job_id': jobId});
-      }
-      return _ok({'jobs': jobs});
-    }
-    if (segments.length == 5 &&
-        method == 'POST' &&
-        segments[0] == 'api' &&
-        segments[1] == 'image-gen' &&
-        segments[2] == 'recipes' &&
-        segments[4] == 'hero') {
-      final jobId = 'job-${_nextImageJobId++}';
-      _imageJobs[jobId] = {
-        'job_id': jobId,
-        'status': 'done',
-        'image_url': 'https://picsum.photos/seed/hero-${segments[3]}/1200/900',
-        'error': null,
-      };
-      return _ok({'job_id': jobId});
-    }
-    if (segments.length == 4 &&
-        method == 'GET' &&
-        segments[0] == 'api' &&
-        segments[1] == 'image-gen' &&
-        segments[2] == 'jobs') {
-      final job = _imageJobs[segments[3]];
-      if (job == null) return _error('Job not found', 404);
-      return _ok(_copy(job));
-    }
 
     if (method == 'GET' && path == '/api/inventory') {
       _refreshInventoryExpiry();
