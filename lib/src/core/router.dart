@@ -14,6 +14,7 @@ import '../features/auth/screens/onboarding_screen.dart';
 import '../features/auth/screens/verify_email_screen.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
 import '../features/auth/screens/reset_password_screen.dart';
+import '../features/inbox/screens/inbox_screen.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/recipes/screens/recipes_screen.dart';
 import '../features/meal_plan/screens/meal_plan_screen.dart';
@@ -122,6 +123,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(path: '/chat', builder: (context, state) => const ChatScreen()),
+      GoRoute(
+        path: '/inbox',
+        builder: (context, state) => const InboxScreen(),
+      ),
       GoRoute(
         path: '/paywall',
         builder: (context, state) => const PaywallScreen(),

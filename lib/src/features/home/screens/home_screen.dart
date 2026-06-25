@@ -8,6 +8,7 @@ import 'package:cookest/src/core/theme/app_colors.dart';
 import '../../meal_plan/repositories/meal_plan_repository.dart';
 import '../../pantry/repositories/inventory_repository.dart';
 import '../../profile/repositories/profile_repository.dart';
+import '../../inbox/repositories/notification_repository.dart';
 
 String _greeting() {
   final hour = DateTime.now().hour;
@@ -46,16 +47,56 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
         actions: [
+          Consumer(
+            builder: (context, ref, child) {
+              final unreadAsync = ref.watch(unreadCountProvider);
+              final count = unreadAsync.valueOrNull ?? 0;
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(LucideIcons.bell),
+                    onPressed: () => context.push('/inbox'),
+                  ),
+                  if (count > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          count > 99 ? '99+' : count.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(LucideIcons.messageCircle),
+            onPressed: () => context.push('/chat'),
+          ),
           GestureDetector(
             onTap: () => context.push('/profile'),
             child: const Padding(
               padding: EdgeInsets.symmetric(horizontal: 8),
               child: CkAvatar(alt: 'User', size: CkAvatarSize.sm),
             ),
-          ),
-          IconButton(
-            icon: const Icon(LucideIcons.messageCircle),
-            onPressed: () => context.push('/chat'),
           ),
         ],
       ),
