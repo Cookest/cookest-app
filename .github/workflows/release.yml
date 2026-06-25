@@ -36,13 +36,22 @@ jobs:
         run: |
           VERSION="${{ steps.tag_version.outputs.new_version }}"
           VERSION="${VERSION#v}"
-          sed -i '' "s/^version: .*/version: ${VERSION}+${{ github.run_number }}/g" pubspec.yaml
           
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
+          
+          # Fetch the latest main branch and checkout to ensure a clean, up-to-date state
+          git fetch origin main
+          git checkout -B main origin/main
+          
+          # Update version in pubspec.yaml
+          sed -i '' "s/^version: .*/version: ${VERSION}+${{ github.run_number }}/g" pubspec.yaml
+          
           git add pubspec.yaml
           git commit -m "chore: bump version to ${VERSION}+${{ github.run_number }} [skip ci]" || echo "No changes to commit"
-          git push origin HEAD:main
+          
+          # Push to origin main, using a rebase fallback in case of concurrent changes
+          git push origin main || (git pull origin main --rebase && git push origin main)
 
       - name: Setup Java
         uses: actions/setup-java@v3
