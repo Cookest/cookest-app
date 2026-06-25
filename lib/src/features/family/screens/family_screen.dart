@@ -156,6 +156,11 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: context.appSurface.withValues(alpha: 0.9),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: context.appBorder.withValues(alpha: 0.4), width: 1),
+        ),
         title: const Text('Remove from Family'),
         content: Text('Are you sure you want to remove ${member.name ?? 'this member'} from the family?'),
         actions: [
@@ -182,6 +187,11 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: context.appSurface.withValues(alpha: 0.9),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: context.appBorder.withValues(alpha: 0.4), width: 1),
+        ),
         title: const Text('Transfer Ownership'),
         content: Text('Are you sure you want to transfer family ownership to ${member.name ?? 'this member'}? You will become a regular member.'),
         actions: [
@@ -208,6 +218,11 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: context.appSurface.withValues(alpha: 0.9),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: context.appBorder.withValues(alpha: 0.4), width: 1),
+        ),
         title: const Text('Leave Family'),
         content: Text(isOwner
             ? 'Are you sure you want to leave the family? Since you are the owner, ownership will be transferred to another member. If you are the last member, the family group will be disbanded.'
@@ -294,6 +309,15 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                 if (isOwner && m.userId != profile.id)
                   PopupMenuButton<String>(
                     icon: Icon(LucideIcons.moreVertical, size: 18, color: context.appMuted),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: context.appBorder.withValues(alpha: 0.4),
+                        width: 1,
+                      ),
+                    ),
+                    color: context.appSurface.withValues(alpha: 0.9),
+                    elevation: 8,
                     onSelected: (value) {
                       if (value == 'kick') {
                         _kickMember(m);
