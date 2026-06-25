@@ -68,6 +68,21 @@ class HouseholdRepository {
     final response = await _dio.post('/api/households/$householdId/invites');
     return response.data['token'] as String;
   }
+
+  /// Removes a member from the household, or leaves the household.
+  Future<Household?> removeMember(String memberId) async {
+    final response = await _dio.delete('/api/households/members/$memberId');
+    if (response.data == null) return null;
+    return Household.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// Transfers ownership of the household to another member.
+  Future<Household> transferOwnership(String newOwnerId) async {
+    final response = await _dio.post('/api/households/transfer-ownership', data: {
+      'new_owner_id': newOwnerId,
+    });
+    return Household.fromJson(response.data as Map<String, dynamic>);
+  }
 }
 
 final householdRepositoryProvider = Provider<HouseholdRepository>((ref) {

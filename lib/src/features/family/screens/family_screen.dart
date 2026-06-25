@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:cookest_ui/cookest_ui.dart';
 import 'package:cookest/src/core/theme/app_colors.dart';
 import '../repositories/household_repository.dart';
+import '../../profile/repositories/profile_repository.dart';
 
 /// Family / household screen: create or join a family group, see members, and
 /// share an invite code so relatives can join and help plan meals.
@@ -151,7 +152,90 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
     );
   }
 
+  Future<void> _kickMember(HouseholdMember member) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove from Family'),
+        content: Text('Are you sure you want to remove ${member.name ?? 'this member'} from the family?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    _run(() async {
+      await ref.read(householdRepositoryProvider).removeMember(member.userId);
+    });
+  }
+
+  Future<void> _transferOwnership(HouseholdMember member) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Transfer Ownership'),
+        content: Text('Are you sure you want to transfer family ownership to ${member.name ?? 'this member'}? You will become a regular member.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Transfer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    _run(() async {
+      await ref.read(householdRepositoryProvider).transferOwnership(member.userId);
+    });
+  }
+
+  Future<void> _leaveFamily(String currentUserId, bool isOwner) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Leave Family'),
+        content: Text(isOwner
+            ? 'Are you sure you want to leave the family? Since you are the owner, ownership will be transferred to another member. If you are the last member, the family group will be disbanded.'
+            : 'Are you sure you want to leave the family?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Leave', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    _run(() async {
+      await ref.read(householdRepositoryProvider).removeMember(currentUserId);
+    });
+  }
+
   Widget _buildHousehold(Household household) {
+    final profile = ref.watch(profileProvider).valueOrNull;
+    final isOwner = profile != null && household.ownerId == profile.id;
+
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
@@ -178,15 +262,59 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(m.name ?? 'Member',
-                      style: GoogleFonts.inter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${m.name ?? 'Member'}${m.userId == profile?.id ? ' (You)' : ''}',
+                        style: GoogleFonts.inter(
                           fontWeight: FontWeight.w500,
-                          color: context.appHeading)),
+                          color: context.appHeading,
+                        ),
+                      ),
+                      Text(
+                        m.role == 'owner' ? 'Owner' : 'Member',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: context.appMuted,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                if (m.role == 'owner')
-                  Text('Owner',
-                      style: GoogleFonts.inter(
-                          fontSize: 12, color: context.appMuted)),
+                if (isOwner && m.userId != profile.id)
+                  PopupMenuButton<String>(
+                    icon: Icon(LucideIcons.moreVertical, size: 18, color: context.appMuted),
+                    onSelected: (value) {
+                      if (value == 'kick') {
+                        _kickMember(m);
+                      } else if (value == 'transfer') {
+                        _transferOwnership(m);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'transfer',
+                        child: Row(
+                          children: [
+                            Icon(LucideIcons.shieldAlert, size: 16),
+                            SizedBox(width: 8),
+                            Text('Transfer Ownership'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'kick',
+                        child: Row(
+                          children: [
+                            Icon(LucideIcons.userMinus, size: 16, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text('Remove from Family', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
@@ -199,6 +327,15 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
           iconLeft:
               const Icon(LucideIcons.userPlus, size: 16, color: Colors.white),
           child: const Text('Invite a family member'),
+        ),
+        const SizedBox(height: 12),
+        CkButton(
+          variant: CkButtonVariant.ghost,
+          onPressed: _busy || profile == null ? null : () => _leaveFamily(profile.id, isOwner),
+          loading: _busy,
+          fullWidth: true,
+          iconLeft: Icon(LucideIcons.logOut, size: 16, color: context.appMuted),
+          child: Text('Leave family', style: TextStyle(color: context.appMuted)),
         ),
       ],
     );
