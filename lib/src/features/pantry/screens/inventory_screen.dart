@@ -10,6 +10,7 @@ import 'package:cookest/src/core/theme/app_colors.dart';
 import '../repositories/inventory_repository.dart';
 import '../models/inventory_item.dart';
 import 'add_inventory_sheet.dart';
+import '../../shopping_list/repositories/shopping_repository.dart';
 
 class InventoryScreen extends ConsumerStatefulWidget {
   const InventoryScreen({super.key});
@@ -76,8 +77,9 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
         appBar: AppBar(
           backgroundColor: context.appBackground,
           elevation: 0,
+          centerTitle: false,
           title: Text(
-            'My Pantry',
+            'Pantry',
             style: GoogleFonts.playfairDisplay(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -583,7 +585,7 @@ class _InventoryItemTile extends ConsumerWidget {
           color: CookestTokens.colorPrimaryDEFAULT.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: const Icon(LucideIcons.pencil, color: CookestTokens.colorPrimaryDEFAULT, size: 20),
+        child: const Icon(LucideIcons.shoppingCart, color: CookestTokens.colorPrimaryDEFAULT, size: 20),
       ),
       secondaryBackground: Container(
         margin: const EdgeInsets.only(bottom: 8),
@@ -604,7 +606,20 @@ class _InventoryItemTile extends ConsumerWidget {
       ),
       confirmDismiss: (dir) async {
         if (dir == DismissDirection.startToEnd) {
-          _showEditDialog(context, ref);
+          try {
+            await ref.read(shoppingRepositoryProvider).addItem(item.name, item.quantity, item.unit);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('${item.name} added to groceries')),
+              );
+            }
+          } catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Failed to add to groceries: $e')),
+              );
+            }
+          }
           return false;
         }
         return true;
@@ -617,10 +632,12 @@ class _InventoryItemTile extends ConsumerWidget {
       },
       child: Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: CkCard(
-          padding: CkCardPadding.sm,
-          child: Row(
-            children: [
+        child: GestureDetector(
+          onLongPress: () => _showEditDialog(context, ref),
+          child: CkCard(
+            padding: CkCardPadding.sm,
+            child: Row(
+              children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -659,6 +676,7 @@ class _InventoryItemTile extends ConsumerWidget {
                 ),
             ],
           ),
+        ),
         ),
       ),
     );
