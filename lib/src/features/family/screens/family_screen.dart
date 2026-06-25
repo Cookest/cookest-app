@@ -264,8 +264,8 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
             '${household.members.length == 1 ? '' : 's'}',
             style: GoogleFonts.inter(color: context.appMuted)),
         const SizedBox(height: 20),
-        ...household.members.map(
-          (m) => Container(
+        ...household.members.map((m) {
+          final memberWidget = Container(
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
@@ -307,51 +307,37 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                   ),
                 ),
                 if (isOwner && m.userId != profile.id)
-                  PopupMenuButton<String>(
-                    icon: Icon(LucideIcons.moreVertical, size: 18, color: context.appMuted),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(
-                        color: context.appBorder.withValues(alpha: 0.4),
-                        width: 1,
-                      ),
-                    ),
-                    color: context.appSurface.withValues(alpha: 0.9),
-                    elevation: 8,
-                    onSelected: (value) {
-                      if (value == 'kick') {
-                        _kickMember(m);
-                      } else if (value == 'transfer') {
-                        _transferOwnership(m);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'transfer',
-                        child: Row(
-                          children: [
-                            Icon(LucideIcons.shieldAlert, size: 16),
-                            SizedBox(width: 8),
-                            Text('Transfer Ownership'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'kick',
-                        child: Row(
-                          children: [
-                            Icon(LucideIcons.userMinus, size: 16, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('Remove from Family', style: TextStyle(color: Colors.red)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                  Icon(LucideIcons.moreVertical, size: 18, color: context.appMuted),
               ],
             ),
-          ),
-        ),
+          );
+
+          if (isOwner && m.userId != profile.id) {
+            return CkContextMenu<String>(
+              items: const [
+                CkContextMenuItem(
+                  value: 'transfer',
+                  label: 'Transfer Ownership',
+                  icon: Icon(LucideIcons.shieldAlert, size: 16),
+                ),
+                CkContextMenuItem(
+                  value: 'kick',
+                  label: 'Remove from Family',
+                  icon: Icon(LucideIcons.userMinus, size: 16, color: Colors.red),
+                ),
+              ],
+              onSelected: (value) {
+                if (value == 'kick') {
+                  _kickMember(m);
+                } else if (value == 'transfer') {
+                  _transferOwnership(m);
+                }
+              },
+              child: memberWidget,
+            );
+          }
+          return memberWidget;
+        }),
         const SizedBox(height: 16),
         CkButton(
           onPressed: _busy ? null : () => _invite(household),
