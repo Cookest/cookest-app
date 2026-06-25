@@ -9,6 +9,10 @@ import 'package:cookest_ui/cookest_ui.dart';
 import 'package:cookest/src/core/theme/app_colors.dart';
 import '../repositories/meal_plan_repository.dart';
 import '../models/meal_plan.dart';
+import '../../pantry/repositories/inventory_repository.dart';
+import '../../profile/repositories/profile_repository.dart';
+import '../../family/repositories/household_repository.dart';
+import '../../inbox/repositories/suggestion_repository.dart';
 import '../../shopping_list/repositories/shopping_repository.dart';
 import '../../recipes/repositories/recipe_repository.dart';
 import '../../recipes/models/recipe.dart';
@@ -386,13 +390,20 @@ class _MealCardContent extends ConsumerWidget {
                           : () => _setFlex(context, ref),
                       child: const Text('Flex'),
                     ),
-                    CkButton(
-                      size: CkButtonSize.sm,
-                      variant: CkButtonVariant.ghost,
-                      iconLeft: const Icon(LucideIcons.repeat2, size: 14),
-                      onPressed: () =>
-                          _showRecipePickerSheet(context, ref, plan, slot),
-                      child: const Text('Change'),
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final household = ref.watch(myHouseholdProvider).valueOrNull;
+                        final profile = ref.watch(profileProvider).valueOrNull;
+                        final isOwner = household == null || (profile != null && household.ownerId == profile.id);
+                        return CkButton(
+                          size: CkButtonSize.sm,
+                          variant: CkButtonVariant.ghost,
+                          iconLeft: const Icon(LucideIcons.repeat2, size: 14),
+                          onPressed: () =>
+                              _showRecipePickerSheet(context, ref, plan, slot),
+                          child: Text(isOwner ? 'Change' : 'Suggest Change'),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -473,6 +484,10 @@ class _EmptyMealCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final household = ref.watch(myHouseholdProvider).valueOrNull;
+    final profile = ref.watch(profileProvider).valueOrNull;
+    final isOwner = household == null || (profile != null && household.ownerId == profile.id);
+
     return GestureDetector(
       onTap: () => _showRecipePickerSheet(context, ref, plan, slot),
       child: DottedBorderBox(
@@ -483,7 +498,7 @@ class _EmptyMealCard extends ConsumerWidget {
               const Icon(LucideIcons.plus, size: 18),
               const SizedBox(width: 6),
               Text(
-                'Add Meal',
+                isOwner ? 'Add Meal' : 'Suggest Meal',
                 style: TextStyle(fontSize: 14, color: context.appMuted),
               ),
             ],
@@ -615,19 +630,42 @@ class _RecipePickerSheetState extends ConsumerState<_RecipePickerSheet> {
 
   Future<void> _selectRecipe(BuildContext context, Recipe recipe) async {
     try {
-      await ref.read(mealPlanRepositoryProvider).swapRecipe(
-            widget.plan.id,
-            widget.slot.id,
-            recipe.id,
-            dayOfWeek: widget.slot.dayOfWeek,
-            mealType: widget.slot.mealType,
+      final household = ref.read(myHouseholdProvider).valueOrNull;
+      final profile = ref.read(profileProvider).valueOrNull;
+      final isOwner = household == null || (profile != null && household.ownerId == profile.id);
+
+      if (isOwner) {
+        await ref.read(mealPlanRepositoryProvider).swapRecipe(
+              widget.plan.id,
+              widget.slot.id,
+              recipe.id,
+              dayOfWeek: widget.slot.dayOfWeek,
+              mealType: widget.slot.mealType,
+            );
+        ref.invalidate(currentMealPlanProvider);
+        if (context.mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Recipe assigned to meal plan.')),
           );
-      ref.invalidate(currentMealPlanProvider);
-      if (context.mounted) Navigator.pop(context);
+        }
+      } else {
+        await ref.read(suggestionRepositoryProvider).createSuggestion(
+              int.parse(widget.plan.id),
+              int.parse(widget.slot.id),
+              int.parse(recipe.id),
+            );
+        if (context.mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Recipe suggestion sent to family owner.')),
+          );
+        }
+      }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to assign recipe: $e')),
+          SnackBar(content: Text('Failed to assign/suggest recipe: $e')),
         );
       }
     }
