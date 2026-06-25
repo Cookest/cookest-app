@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cookest_ui/cookest_ui.dart';
 import 'src/core/config.dart';
 import 'src/core/router.dart';
+import 'src/core/theme/theme_provider.dart';
 
 import 'src/core/api/api_client.dart';
 
@@ -28,13 +29,14 @@ class CookestApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
       title: 'Cookest',
       debugShowCheckedModeBanner: false,
       theme: CookestTheme.light,
       darkTheme: CookestTheme.dark,
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
       routerConfig: router,
     );
   }

@@ -1,4 +1,5 @@
 import 'package:cookest/src/core/theme/app_colors.dart';
+import 'package:cookest/src/core/theme/theme_provider.dart';
 import 'package:cookest_ui/cookest_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -106,6 +107,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(profileProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return Scaffold(
       backgroundColor: context.appBackground,
@@ -167,6 +169,70 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         label: 'Allergies',
                         placeholder: 'nuts, shellfish',
                         fullWidth: true,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                CkCard(
+                  padding: CkCardPadding.md,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Appearance',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: context.appHeading,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Choose your preferred theme mode.',
+                        style: TextStyle(color: context.appMuted),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: CkButton(
+                              variant: themeMode == ThemeMode.light
+                                  ? CkButtonVariant.primary
+                                  : CkButtonVariant.secondary,
+                              size: CkButtonSize.sm,
+                              onPressed: () => ref
+                                  .read(themeModeProvider.notifier)
+                                  .setThemeMode(ThemeMode.light),
+                              child: const Text('Light'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: CkButton(
+                              variant: themeMode == ThemeMode.dark
+                                  ? CkButtonVariant.primary
+                                  : CkButtonVariant.secondary,
+                              size: CkButtonSize.sm,
+                              onPressed: () => ref
+                                  .read(themeModeProvider.notifier)
+                                  .setThemeMode(ThemeMode.dark),
+                              child: const Text('Dark'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: CkButton(
+                              variant: themeMode == ThemeMode.system
+                                  ? CkButtonVariant.primary
+                                  : CkButtonVariant.secondary,
+                              size: CkButtonSize.sm,
+                              onPressed: () => ref
+                                  .read(themeModeProvider.notifier)
+                                  .setThemeMode(ThemeMode.system),
+                              child: const Text('System'),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
