@@ -1,4 +1,4 @@
-import 'package:cookest_app/src/core/api/api_client.dart';
+import 'package:cookest/src/core/api/api_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
@@ -18,9 +18,8 @@ class NotificationRepository {
   NotificationRepository(this._apiClient);
 
   Future<List<Map<String, dynamic>>> getNotifications() async {
-    final response = await _apiClient.get('/api/users/me/notifications');
-    final List<dynamic> data = response.data;
-    return data.cast<Map<String, dynamic>>();
+    final response = await _apiClient.get<List<dynamic>>('/api/users/me/notifications');
+    return response.map((item) => Map<String, dynamic>.from(item as Map)).toList();
   }
 
   Future<void> markAsRead(String id) async {

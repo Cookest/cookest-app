@@ -9,7 +9,6 @@ import 'package:cookest_ui/cookest_ui.dart';
 import 'package:cookest/src/core/theme/app_colors.dart';
 import '../repositories/meal_plan_repository.dart';
 import '../models/meal_plan.dart';
-import '../../pantry/repositories/inventory_repository.dart';
 import '../../profile/repositories/profile_repository.dart';
 import '../../family/repositories/household_repository.dart';
 import '../../inbox/repositories/suggestion_repository.dart';

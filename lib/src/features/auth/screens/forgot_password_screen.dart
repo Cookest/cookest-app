@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cookest_ui/cookest_ui.dart';
-import 'package:cookest_app/src/core/api/api_client.dart';
+import 'package:cookest/src/core/api/api_client.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -51,27 +51,28 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Forgot Password')),
       body: Padding(
-        padding: const EdgeInsets.all(CookestSpacing.lg),
+        padding: const EdgeInsets.all(24),
         child: _emailSent
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(Icons.check_circle_outline, size: 64, color: CookestColors.primary),
-                  const SizedBox(height: CookestSpacing.xl),
+                  const Icon(Icons.check_circle_outline, size: 64, color: CookestTokens.colorPrimaryDEFAULT),
+                  const SizedBox(height: 32),
                   Text(
                     'Email Sent!',
                     style: Theme.of(context).textTheme.headlineMedium,
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: CookestSpacing.md),
+                  const SizedBox(height: 16),
                   const Text(
                     'If an account exists with that email, a password reset link has been sent.',
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: CookestSpacing.xxl),
-                  CookestButton(
+                  const SizedBox(height: 40),
+                  CkButton(
                     onPressed: () => context.go('/login'),
-                    text: 'Back to Login',
+                    fullWidth: true,
+                    child: const Text('Back to Login'),
                   ),
                 ],
               )
@@ -81,16 +82,18 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   const Text(
                     'Enter your email address and we will send you a link to reset your password.',
                   ),
-                  const SizedBox(height: CookestSpacing.xl),
-                  CookestTextField(
+                  const SizedBox(height: 32),
+                  CkInput(
                     controller: _emailController,
                     label: 'Email Address',
                     keyboardType: TextInputType.emailAddress,
+                    fullWidth: true,
                   ),
-                  const SizedBox(height: CookestSpacing.xl),
-                  CookestButton(
+                  const SizedBox(height: 32),
+                  CkButton(
                     onPressed: _isLoading ? null : _submit,
-                    text: 'Send Reset Link',
+                    fullWidth: true,
+                    child: const Text('Send Reset Link'),
                   ),
                 ],
               ),

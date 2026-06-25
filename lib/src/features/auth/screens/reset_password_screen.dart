@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cookest_ui/cookest_ui.dart';
-import 'package:cookest_app/src/core/api/api_client.dart';
+import 'package:cookest/src/core/api/api_client.dart';
 
 class ResetPasswordScreen extends ConsumerStatefulWidget {
   final String token;
@@ -68,21 +68,23 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Reset Password')),
       body: Padding(
-        padding: const EdgeInsets.all(CookestSpacing.lg),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text('Enter your new password below.'),
-            const SizedBox(height: CookestSpacing.xl),
-            CookestTextField(
+            const SizedBox(height: 32),
+            CkInput(
               controller: _passwordController,
               label: 'New Password',
               obscureText: true,
+              fullWidth: true,
             ),
-            const SizedBox(height: CookestSpacing.xl),
-            CookestButton(
+            const SizedBox(height: 32),
+            CkButton(
               onPressed: _isLoading ? null : _submit,
-              text: 'Reset Password',
+              fullWidth: true,
+              child: const Text('Reset Password'),
             ),
           ],
         ),

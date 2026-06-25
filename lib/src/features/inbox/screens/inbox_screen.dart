@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cookest_ui/cookest_ui.dart';
 import '../repositories/notification_repository.dart';
-import '../repositories/suggestion_repository.dart';
 
 class InboxScreen extends ConsumerStatefulWidget {
   const InboxScreen({super.key});
@@ -107,7 +106,7 @@ class _NotificationsListState extends ConsumerState<_NotificationsList> {
         return ListTile(
           title: Text(notif['title'] ?? 'Notification'),
           subtitle: Text(notif['body'] ?? ''),
-          trailing: isRead ? null : const Icon(Icons.circle, color: CookestColors.primary, size: 12),
+          trailing: isRead ? null : const Icon(Icons.circle, color: CookestTokens.colorPrimaryDEFAULT, size: 12),
           onTap: () {
             if (!isRead) {
               _markAsRead(notif['id']);

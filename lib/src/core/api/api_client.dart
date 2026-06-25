@@ -119,6 +119,13 @@ class ApiClient {
     return response.data as T;
   }
 
+  /// Sends a PUT request to [path] with optional JSON [data].
+  /// Returns the decoded response body cast to [T].
+  Future<T> put<T>(String path, {dynamic data}) async {
+    final response = await _dio.put<T>(path, data: data);
+    return response.data as T;
+  }
+
   /// Sends a DELETE request to [path].
   /// Returns the decoded response body cast to [T].
   Future<T> delete<T>(String path) async {

@@ -1,4 +1,4 @@
-import 'package:cookest_app/src/core/api/api_client.dart';
+import 'package:cookest/src/core/api/api_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final suggestionRepositoryProvider = Provider<SuggestionRepository>((ref) {
@@ -12,9 +12,8 @@ class SuggestionRepository {
   SuggestionRepository(this._apiClient);
 
   Future<List<Map<String, dynamic>>> getSuggestions(int planId) async {
-    final response = await _apiClient.get('/api/meal-plans/$planId/suggestions');
-    final List<dynamic> data = response.data;
-    return data.cast<Map<String, dynamic>>();
+    final response = await _apiClient.get<List<dynamic>>('/api/meal-plans/$planId/suggestions');
+    return response.map((item) => Map<String, dynamic>.from(item as Map)).toList();
   }
 
   Future<void> createSuggestion(int planId, int slotId, int recipeId) async {
