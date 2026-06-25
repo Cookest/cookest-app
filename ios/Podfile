@@ -39,8 +39,7 @@ end
 post_install do |installer|
   # Create symlink for build/ios to bypass iCloud sync issues
   build_ios_dir = File.expand_path(File.join('..', '..', 'build', 'ios'), __FILE__)
-  cache_dir = '/Users/exxo/Library/Caches/cookest-ui-build/ios'
-  
+  cache_dir = File.expand_path('~/Library/Caches/cookest-ui-build/ios')
   if File.exist?(build_ios_dir) && !File.symlink?(build_ios_dir)
     require 'fileutils'
     FileUtils.rm_rf(build_ios_dir)

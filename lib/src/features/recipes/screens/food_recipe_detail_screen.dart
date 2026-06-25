@@ -336,57 +336,12 @@ class _RecipeBodyState extends ConsumerState<_RecipeBody> {
                 // Steps
                 if (widget.recipe.steps.isNotEmpty) ...[
                   const SizedBox(height: 20),
-                  // Header row with AI generate button
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Instructions',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                color: context.appHeading,
-                                fontWeight: FontWeight.w600,
-                              ),
+                  Text(
+                    'Instructions',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: context.appHeading,
+                          fontWeight: FontWeight.w600,
                         ),
-                      ),
-                      if (genState == _GenState.idle)
-                        _AiGenerateButton(onPressed: _startGeneration),
-                      if (isGenerating)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: CookestTokens.colorPrimaryDEFAULT,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Generating…',
-                              style: TextStyle(
-                                  fontSize: 12, color: context.appMuted),
-                            ),
-                          ],
-                        ),
-                      if (genState == _GenState.done)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(LucideIcons.checkCircle,
-                                size: 14,
-                                color: CookestTokens.colorPrimaryDEFAULT),
-                            const SizedBox(width: 4),
-                            Text(
-                              'AI images ready',
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: CookestTokens.colorPrimaryDEFAULT),
-                            ),
-                          ],
-                        ),
-                    ],
                   ),
                   const SizedBox(height: 8),
                   ...widget.recipe.steps.map(
@@ -526,48 +481,7 @@ class _NutrientChip extends StatelessWidget {
   }
 }
 
-// ── AI Generate Button ────────────────────────────────────────────────────────
 
-class _AiGenerateButton extends StatelessWidget {
-  final VoidCallback onPressed;
-  const _AiGenerateButton({required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: CookestTokens.colorPrimaryDEFAULT.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: CookestTokens.colorPrimaryDEFAULT.withValues(alpha: 0.4),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              LucideIcons.sparkles,
-              size: 13,
-              color: CookestTokens.colorPrimaryDEFAULT,
-            ),
-            const SizedBox(width: 5),
-            Text(
-              'Gerar imagens',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: CookestTokens.colorPrimaryDEFAULT,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 // ── Step Card ─────────────────────────────────────────────────────────────────
 

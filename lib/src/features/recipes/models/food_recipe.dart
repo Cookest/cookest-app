@@ -222,6 +222,11 @@ class FoodRecipeDetail {
         .map((e) => (e as Map<String, dynamic>)['url']?.toString() ?? '')
         .where((u) => u.isNotEmpty)
         .toList();
+    
+    final primaryImageUrl = json['primary_image_url']?.toString();
+    if (primaryImageUrl != null && primaryImageUrl.isNotEmpty && !images.contains(primaryImageUrl)) {
+      images.insert(0, primaryImageUrl);
+    }
     return FoodRecipeDetail(
       id: json['id'] as int,
       name: json['name'] as String,
