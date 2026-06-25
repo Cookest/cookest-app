@@ -849,7 +849,32 @@ class _MockApiState {
       );
       if (item == null) return _error('Shopping item not found', 404);
       final data = _asMap(options.data);
-      item['is_checked'] = data['is_checked'] == true;
+      final wasChecked = item['is_checked'] == true;
+      final isChecked = data['is_checked'] == true;
+      item['is_checked'] = isChecked;
+
+      if (isChecked && !wasChecked) {
+        final ingId = int.tryParse(item['ingredient_id']?.toString() ?? '') ?? 9999;
+        final name = item['name']?.toString() ?? 'Unknown item';
+        final qty = num.tryParse(item['quantity']?.toString() ?? '') ?? 1;
+        final unit = item['unit']?.toString() ?? 'piece';
+
+        final exists = _inventory.any((e) => e['ingredient_id'] == ingId || e['name'] == name);
+        if (!exists) {
+          _inventory.insert(
+            0,
+            _inventoryItem(
+              id: (300 + _inventory.length + 1).toString(),
+              ingredientId: ingId,
+              name: name,
+              quantity: qty,
+              unit: unit,
+              location: 'pantry',
+              daysFromNow: 14,
+            ),
+          );
+        }
+      }
       return _ok({'ok': true});
     }
     if (segments.length == 4 &&
