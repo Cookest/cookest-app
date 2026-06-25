@@ -7,6 +7,7 @@ import 'package:cookest_ui/cookest_ui.dart';
 import 'package:cookest/src/core/theme/app_colors.dart';
 import '../repositories/shopping_repository.dart';
 import '../models/shopping_item.dart';
+import '../../pantry/repositories/inventory_repository.dart';
 
 class ShoppingListScreen extends ConsumerStatefulWidget {
   const ShoppingListScreen({super.key});
@@ -257,6 +258,9 @@ class _ShoppingListScreenState extends ConsumerState<ShoppingListScreen> {
                 try {
                   await ref.read(shoppingRepositoryProvider).toggleCheck(item.id, !item.isChecked);
                   ref.invalidate(shoppingListProvider);
+                  ref.invalidate(inventoryListProvider);
+                  ref.invalidate(expiringCountProvider);
+                  ref.invalidate(recipeSuggestionsProvider);
                 } catch (_) {}
               },
               child: Padding(
