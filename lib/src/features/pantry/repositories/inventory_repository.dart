@@ -24,6 +24,14 @@ class InventoryRepository {
         .toList();
   }
 
+  /// Add a pantry item by its catalog `ingredient_id` (preset-only path).
+  Future<InventoryItem> addItemById(Map<String, dynamic> data) async {
+    final response = await _dio.post('/api/inventory', data: data);
+    return InventoryItem.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// Resolve a name against the catalog and add it. The backend rejects names
+  /// that are not in the preset catalog.
   Future<InventoryItem> addItem(Map<String, dynamic> data) async {
     final response = await _dio.post('/api/inventory/quick', data: data);
     return InventoryItem.fromJson(response.data as Map<String, dynamic>);

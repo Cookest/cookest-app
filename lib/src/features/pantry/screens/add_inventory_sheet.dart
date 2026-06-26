@@ -56,6 +56,7 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
   final _focusNode = FocusNode();
 
   String _selectedName = '';
+  int? _selectedIngredientId;
   double _quantity = 1;
   String _unit = 'pcs';
   String _location = 'pantry';
@@ -84,7 +85,12 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
 
   void _onSearchChanged(String q) {
     _debounce?.cancel();
-    setState(() => _selectedName = q);
+    // Typing invalidates any previous catalog selection — the user must pick a
+    // suggestion so the pantry only stores preset ingredients.
+    setState(() {
+      _selectedName = q;
+      _selectedIngredientId = null;
+    });
     if (q.length < 2) {
       setState(() => _suggestions = []);
       return;
@@ -105,16 +111,20 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
   void _selectSuggestion(IngredientSuggestion s) {
     setState(() {
       _selectedName = s.name;
+      _selectedIngredientId = s.id;
       _searchController.text = s.name;
       _suggestions = [];
     });
     FocusScope.of(context).unfocus();
   }
 
-  void _selectQuickItem((String, String, double, String, String) item) {
+  /// Quick chips are just names; resolve each against the catalog and select the
+  /// matching preset ingredient (so we add by id, never free text).
+  Future<void> _selectQuickItem((String, String, double, String, String) item) async {
     final (_, name, qty, unit, loc) = item;
     setState(() {
       _selectedName = name;
+      _selectedIngredientId = null;
       _searchController.text = name;
       _quantity = qty;
       _quantityController.text =
@@ -122,16 +132,42 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
       _unit = unit;
       _location = loc;
       _suggestions = [];
+      _loadingSuggestions = true;
     });
+    try {
+      final results =
+          await ref.read(inventoryRepositoryProvider).searchIngredients(name);
+      final lower = name.toLowerCase();
+      IngredientSuggestion? match;
+      for (final r in results) {
+        if (r.name.toLowerCase() == lower) {
+          match = r;
+          break;
+        }
+      }
+      final chosen = match ?? (results.isNotEmpty ? results.first : null);
+      if (!mounted) return;
+      if (chosen != null) {
+        setState(() => _selectedIngredientId = chosen.id);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('"$name" is not in the catalog yet')),
+        );
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _loadingSuggestions = false);
+    }
   }
 
   Future<void> _save() async {
     final name = _selectedName.trim();
-    if (name.isEmpty) return;
+    final ingredientId = _selectedIngredientId;
+    if (name.isEmpty || ingredientId == null) return;
     setState(() => _saving = true);
     try {
-      await ref.read(inventoryRepositoryProvider).addItem({
-        'name': name,
+      await ref.read(inventoryRepositoryProvider).addItemById({
+        'ingredient_id': ingredientId,
         'quantity': _quantity,
         'unit': _unit,
         'storage_location': _location,
@@ -146,6 +182,7 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
         setState(() {
           _added = true;
           _selectedName = '';
+          _selectedIngredientId = null;
           _searchController.clear();
           _suggestions = [];
           _quantity = 1;
@@ -432,14 +469,27 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
             ),
             const SizedBox(height: 20),
 
-            // Add button
+            // Hint when a name is typed but not yet picked from the catalog.
+            if (_selectedName.trim().isNotEmpty &&
+                _selectedIngredientId == null &&
+                !_loadingSuggestions) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Pick an ingredient from the list to add it.',
+                style: TextStyle(color: context.appMuted, fontSize: 12),
+              ),
+            ],
+            const SizedBox(height: 12),
+
+            // Add button — enabled only once a catalog ingredient is selected.
             CkButton(
-              onPressed: _saving || _selectedName.trim().isEmpty ? null : _save,
+              onPressed:
+                  _saving || _selectedIngredientId == null ? null : _save,
               loading: _saving,
               fullWidth: true,
               iconLeft: const Icon(LucideIcons.plus, size: 16, color: Colors.white),
               child: Text(
-                _selectedName.trim().isEmpty
+                _selectedIngredientId == null
                     ? 'Add Item'
                     : 'Add ${_selectedName.trim()}',
                 overflow: TextOverflow.ellipsis,
