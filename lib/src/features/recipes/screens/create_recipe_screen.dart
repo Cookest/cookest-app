@@ -1,11 +1,14 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:cookest_ui/cookest_ui.dart';
 import 'package:cookest/src/core/theme/app_colors.dart';
 import '../repositories/recipe_repository.dart';
+import 'recipes_screen.dart';
 
 class CreateRecipeScreen extends ConsumerStatefulWidget {
   const CreateRecipeScreen({super.key});
@@ -21,10 +24,20 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   final _cookTimeController = TextEditingController();
   final _instructionsController = TextEditingController();
 
-  String _difficulty = 'Easy';
+  String _difficulty = 'easy';
   final List<TextEditingController> _ingredientControllers = [TextEditingController()];
   bool _isLoading = false;
   String? _errorMessage;
+
+  final ImagePicker _picker = ImagePicker();
+  XFile? _image;
+
+  Future<void> _pickImage() async {
+    final picked = await _picker.pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      setState(() => _image = picked);
+    }
+  }
 
   @override
   void dispose() {
@@ -49,12 +62,24 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     final ingredients = _ingredientControllers
         .map((c) => c.text.trim())
         .where((s) => s.isNotEmpty)
+        .map((s) => {
+          'ingredient_name': s,
+          'quantity': null,
+          'unit': null,
+        })
         .toList();
 
-    final instructions = _instructionsController.text
+    final steps = _instructionsController.text
         .split('\n')
         .map((s) => s.trim())
         .where((s) => s.isNotEmpty)
+        .toList()
+        .asMap()
+        .entries
+        .map((e) => {
+          'step_number': e.key + 1,
+          'instruction': e.value,
+        })
         .toList();
 
     setState(() {
@@ -63,15 +88,22 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     });
 
     try {
-      await ref.read(recipeRepositoryProvider).createRecipe({
+      final recipe = await ref.read(recipeRepositoryProvider).createRecipe({
         'name': name,
         'description': _descriptionController.text.trim(),
-        'prep_time': int.tryParse(_prepTimeController.text.trim()) ?? 0,
-        'cook_time': int.tryParse(_cookTimeController.text.trim()) ?? 0,
+        'prep_time_min': int.tryParse(_prepTimeController.text.trim()) ?? 0,
+        'cook_time_min': int.tryParse(_cookTimeController.text.trim()) ?? 0,
         'difficulty': _difficulty,
         'ingredients': ingredients,
-        'instructions': instructions,
+        'steps': steps,
       });
+
+      if (_image != null) {
+        await ref.read(recipeRepositoryProvider).uploadRecipeImage(recipe.id, _image!.path);
+      }
+
+      // refresh recipes
+      ref.invalidate(recipesListProvider);
       if (mounted) context.pop();
     } catch (e) {
       if (e.toString().contains('Pro')) {
@@ -116,6 +148,39 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
               ),
               const SizedBox(height: 16),
             ],
+            Center(
+              child: GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  width: double.infinity,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: context.appSurface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: context.appBorder),
+                    image: _image != null
+                        ? DecorationImage(
+                            image: FileImage(File(_image!.path)),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                  child: _image == null
+                      ? Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(LucideIcons.imagePlus,
+                                size: 48, color: context.appMuted),
+                            const SizedBox(height: 8),
+                            Text('Add Recipe Image',
+                                style: TextStyle(color: context.appMuted)),
+                          ],
+                        )
+                      : null,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
             CkInput(
               controller: _nameController,
               label: 'Recipe Name *',
@@ -157,9 +222,11 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
             CkSelect(
               label: 'Difficulty',
               placeholder: 'Select difficulty',
-              options: ['Easy', 'Medium', 'Hard']
-                  .map((d) => CkSelectOption(value: d, label: d))
-                  .toList(),
+              options: [
+                const CkSelectOption(value: 'easy', label: 'Easy'),
+                const CkSelectOption(value: 'medium', label: 'Medium'),
+                const CkSelectOption(value: 'hard', label: 'Hard'),
+              ],
               value: _difficulty,
               onChanged: (val) => setState(() => _difficulty = val),
             ),

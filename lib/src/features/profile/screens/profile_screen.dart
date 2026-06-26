@@ -176,6 +176,13 @@ class ProfileScreen extends ConsumerWidget {
                     const CkDivider(),
                     _buildSettingsRow(
                       context,
+                      icon: LucideIcons.chefHat,
+                      label: 'My Recipes',
+                      onTap: () => context.push('/recipes'),
+                    ),
+                    const CkDivider(),
+                    _buildSettingsRow(
+                      context,
                       icon: LucideIcons.users,
                       label: 'Family',
                       onTap: () => context.push('/family'),

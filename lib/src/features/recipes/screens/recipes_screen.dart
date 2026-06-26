@@ -21,10 +21,25 @@ final recipesListProvider = FutureProvider<List<Recipe>>((ref) {
   final query = ref.watch(recipeSearchProvider);
   final matchInventory = ref.watch(recipeMatchInventoryProvider);
   final category = ref.watch(recipeCategoryProvider);
+  return ref.watch(recipeRepositoryProvider).getMyRecipes(
+    q: query.isEmpty ? null : query,
+    category: category == 'All' ? null : category,
+  );
+});
+
+final communitySearchProvider = StateProvider<String>((ref) => '');
+final communityCuisineProvider = StateProvider<String?>((ref) => null);
+final communityCategoryProvider = StateProvider<String?>((ref) => null);
+
+final communityRecipesProvider = FutureProvider<List<Recipe>>((ref) {
+  final query = ref.watch(communitySearchProvider);
+  final cuisine = ref.watch(communityCuisineProvider);
+  final category = ref.watch(communityCategoryProvider);
+  
   return ref.watch(recipeRepositoryProvider).getRecipes(
     q: query.isEmpty ? null : query,
-    matchInventory: matchInventory,
-    category: category == 'All' ? null : category,
+    cuisine: cuisine,
+    category: category,
   );
 });
 
@@ -63,8 +78,7 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
   void _onBrowseSearchChanged(String value) {
     _browseDebounce?.cancel();
     _browseDebounce = Timer(const Duration(milliseconds: 400), () {
-      ref.read(browseSearchProvider.notifier).state = value;
-      ref.read(browsePageProvider.notifier).state = 1;
+      ref.read(communitySearchProvider.notifier).state = value;
     });
   }
 
@@ -119,8 +133,8 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
               fullWidth: true,
               onChanged: (id) => setState(() => _activeTab = id),
               items: const [
-                CkTabItem(id: 'my', label: 'My Recipes'),
-                CkTabItem(id: 'browse', label: 'Browse'),
+                CkTabItem(id: 'my', label: 'Recipes'),
+                CkTabItem(id: 'browse', label: 'Browse Community'),
               ],
             ),
           ),
@@ -195,7 +209,7 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
   }
 }
 
-// ── My Recipes Tab ──────────────────────────────────────────────────────────
+// ── Recipes Tab ──────────────────────────────────────────────────────────
 
 class _MyRecipesTab extends ConsumerWidget {
   final List<String> categories;
@@ -347,10 +361,9 @@ class _BrowseTabState extends ConsumerState<_BrowseTab> {
 
   @override
   Widget build(BuildContext context) {
-    final browseAsync = ref.watch(browseRecipesProvider);
-    final selectedCuisine = ref.watch(browseCuisineProvider);
-    final selectedCategory = ref.watch(browseCategoryProvider);
-    final page = ref.watch(browsePageProvider);
+    final browseAsync = ref.watch(communityRecipesProvider);
+    final selectedCuisine = ref.watch(communityCuisineProvider);
+    final selectedCategory = ref.watch(communityCategoryProvider);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -378,9 +391,8 @@ class _BrowseTabState extends ConsumerState<_BrowseTab> {
                   padding: const EdgeInsets.only(right: 8),
                   child: GestureDetector(
                     onTap: () {
-                      ref.read(browseCuisineProvider.notifier).state =
+                      ref.read(communityCuisineProvider.notifier).state =
                           isAll ? null : c;
-                      ref.read(browsePageProvider.notifier).state = 1;
                     },
                     child: CkBadge(
                       variant: isSelected
@@ -408,9 +420,8 @@ class _BrowseTabState extends ConsumerState<_BrowseTab> {
                   padding: const EdgeInsets.only(right: 8),
                   child: GestureDetector(
                     onTap: () {
-                      ref.read(browseCategoryProvider.notifier).state =
+                      ref.read(communityCategoryProvider.notifier).state =
                           isAll ? null : c;
-                      ref.read(browsePageProvider.notifier).state = 1;
                     },
                     child: CkBadge(
                       variant: isSelected
@@ -439,82 +450,27 @@ class _BrowseTabState extends ConsumerState<_BrowseTab> {
               error: (e, _) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(LucideIcons.wifiOff, size: 40, color: context.appMuted),
-                      const SizedBox(height: 12),
-                      Text('Could not reach food database',
-                          style: TextStyle(color: context.appMuted)),
-                      const SizedBox(height: 4),
-                      Text('Make sure the food-api service is running.',
-                          style:
-                              TextStyle(color: context.appMuted, fontSize: 12),
-                          textAlign: TextAlign.center),
-                    ],
+                  child: CkAlert(
+                    variant: CkAlertVariant.error,
+                    child: Text('Failed to load recipes: $e'),
                   ),
                 ),
               ),
-              data: (foodPage) => Column(
+              data: (recipes) => Column(
                 children: [
-                  if (foodPage.total > 0)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '${foodPage.total} recipes found',
-                            style: TextStyle(
-                                color: context.appMuted, fontSize: 12),
-                          ),
-                          if (foodPage.total > foodPage.perPage)
-                            Row(
-                              children: [
-                                CkButton(
-                                  variant: CkButtonVariant.ghost,
-                                  size: CkButtonSize.sm,
-                                  onPressed: page > 1
-                                      ? () => ref
-                                          .read(browsePageProvider.notifier)
-                                          .state = page - 1
-                                      : null,
-                                  child: const Icon(LucideIcons.chevronLeft,
-                                      size: 16),
-                                ),
-                                Text('$page',
-                                    style:
-                                        TextStyle(color: context.appMuted)),
-                                CkButton(
-                                  variant: CkButtonVariant.ghost,
-                                  size: CkButtonSize.sm,
-                                  onPressed: foodPage.recipes.length ==
-                                          foodPage.perPage
-                                      ? () => ref
-                                          .read(browsePageProvider.notifier)
-                                          .state = page + 1
-                                      : null,
-                                  child: const Icon(LucideIcons.chevronRight,
-                                      size: 16),
-                                ),
-                              ],
-                            ),
-                        ],
-                      ),
-                    ),
                   Expanded(
-                    child: foodPage.recipes.isEmpty
+                    child: recipes.isEmpty
                         ? Center(
-                            child: Text('No recipes found',
+                            child: Text('No community recipes found',
                                 style: TextStyle(color: context.appMuted)),
                           )
                         : ListView.builder(
-                            itemCount: foodPage.recipes.length,
+                            itemCount: recipes.length,
                             itemBuilder: (context, index) {
-                              final item = foodPage.recipes[index];
+                              final recipe = recipes[index];
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 12),
-                                child: _FoodRecipeCard(item: item),
+                                child: _RecipeListCard(recipe: recipe),
                               );
                             },
                           ),
