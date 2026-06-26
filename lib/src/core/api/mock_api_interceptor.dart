@@ -455,7 +455,7 @@ class _MockApiState {
       return _ok(_copy(slot), 201);
     }
 
-    if (method == 'POST' && path == '/api/recipes/generate') {
+    if (method == 'POST' && path == '/api/recipe-ai/generate') {
       return _ok(_generatedRecipePayload());
     }
     if (method == 'GET' && path == '/api/recipes') {

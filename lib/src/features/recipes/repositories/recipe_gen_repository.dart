@@ -12,7 +12,7 @@ class RecipeGenRepository {
 
   RecipeGenRepository(this._dio);
 
-  /// Calls POST /api/recipes/generate.
+  /// Calls POST /api/recipe-ai/generate.
   ///
   /// The server runs up to 3 generate→score→refine iterations silently and
   /// returns the best result. Expect 30–120 s on CPU-only hardware.
@@ -22,7 +22,7 @@ class RecipeGenRepository {
     int? maxMinutes,
   }) async {
     final response = await _dio.post(
-      '/api/recipes/generate',
+      '/api/recipe-ai/generate',
       data: {
         'use_pantry': usePantry,
         if (cuisineHint != null && cuisineHint.isNotEmpty)
@@ -36,6 +36,18 @@ class RecipeGenRepository {
       ),
     );
     return GeneratedRecipe.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// Calls POST /api/recipe-ai/save to persist a generated recipe into the
+  /// user's recipes. Every ingredient must already be mapped to a catalog id.
+  /// Returns the new recipe id.
+  Future<int> save(GeneratedRecipe recipe) async {
+    final response = await _dio.post(
+      '/api/recipe-ai/save',
+      data: recipe.toSaveJson(),
+    );
+    final data = response.data as Map<String, dynamic>;
+    return (data['id'] as num).toInt();
   }
 }
 

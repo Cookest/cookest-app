@@ -7,19 +7,34 @@ class GenIngredient {
   final String unit;
   final bool isPantryItem;
 
+  /// Resolved master-catalog id (null when this generated name had no catalog
+  /// match — such recipes can't be saved until it's substituted).
+  final int? ingredientId;
+
   const GenIngredient({
     required this.name,
     required this.quantity,
     required this.unit,
     required this.isPantryItem,
+    this.ingredientId,
   });
+
+  bool get isMatched => ingredientId != null;
 
   factory GenIngredient.fromJson(Map<String, dynamic> json) => GenIngredient(
         name: json['name'] as String,
         quantity: (json['quantity'] as num).toDouble(),
         unit: json['unit'] as String,
         isPantryItem: json['is_pantry_item'] as bool? ?? false,
+        ingredientId: (json['ingredient_id'] as num?)?.toInt(),
       );
+
+  Map<String, dynamic> toSaveJson() => {
+        'name': name,
+        'ingredient_id': ingredientId,
+        'quantity': quantity,
+        'unit': unit,
+      };
 }
 
 @immutable
@@ -124,6 +139,25 @@ class GeneratedRecipe {
   });
 
   int get totalMinutes => prepMinutes + cookMinutes;
+
+  /// Generated ingredients with no catalog match — must be resolved before save.
+  List<GenIngredient> get unmatchedIngredients =>
+      ingredients.where((e) => !e.isMatched).toList();
+
+  bool get canSave => ingredients.isNotEmpty && unmatchedIngredients.isEmpty;
+
+  Map<String, dynamic> toSaveJson() => {
+        'name': name,
+        'description': description,
+        'cuisine': cuisine,
+        'difficulty': difficulty,
+        'prep_minutes': prepMinutes,
+        'cook_minutes': cookMinutes,
+        'servings': servings,
+        'ingredients': ingredients.map((e) => e.toSaveJson()).toList(),
+        'steps': steps,
+        'is_public': false,
+      };
 
   factory GeneratedRecipe.fromJson(Map<String, dynamic> json) => GeneratedRecipe(
         name: json['name'] as String,

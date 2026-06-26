@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,6 +8,7 @@ import 'package:cookest_ui/cookest_ui.dart';
 import 'package:cookest/src/core/theme/app_colors.dart';
 import '../models/generated_recipe.dart';
 import '../repositories/recipe_gen_repository.dart';
+import 'recipes_screen.dart';
 
 // ── Option lists ──────────────────────────────────────────────────────────────
 
@@ -46,6 +48,7 @@ class _GenerateRecipeScreenState extends ConsumerState<GenerateRecipeScreen>
   bool _usePantry = true;
   String? _selectedCuisine;
   String? _selectedMaxMinutes;
+  bool _savingRecipe = false;
 
   late final AnimationController _spinAnim;
   int _loadingPhase = 0;
@@ -357,11 +360,22 @@ class _GenerateRecipeScreenState extends ConsumerState<GenerateRecipeScreen>
             ],
           ),
           const SizedBox(height: 10),
+          if (!recipe.canSave) ...[
+            CkAlert(
+              variant: CkAlertVariant.warning,
+              child: Text(
+                'Alguns ingredientes não estão no catálogo e não podem ser guardados: '
+                '${recipe.unmatchedIngredients.map((e) => e.name).join(', ')}',
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
           CkButton(
             iconLeft: const Icon(LucideIcons.bookmarkPlus, size: 16),
             fullWidth: true,
             size: CkButtonSize.lg,
-            onPressed: () => _saveRecipe(recipe),
+            loading: _savingRecipe,
+            onPressed: recipe.canSave ? () => _saveRecipe(recipe) : null,
             child: const Text('Guardar receita'),
           ),
           const SizedBox(height: 20),
@@ -380,15 +394,32 @@ class _GenerateRecipeScreenState extends ConsumerState<GenerateRecipeScreen>
         ),
       );
 
-  void _saveRecipe(GeneratedRecipe recipe) {
-    // TODO: wire to a save-to-my-recipes endpoint once created
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${recipe.name} guardada nas tuas receitas!'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-    Navigator.of(context).pop();
+  Future<void> _saveRecipe(GeneratedRecipe recipe) async {
+    if (!recipe.canSave) return;
+    setState(() => _savingRecipe = true);
+    try {
+      await ref.read(recipeGenRepositoryProvider).save(recipe);
+      ref.invalidate(communityRecipesProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${recipe.name} guardada nas tuas receitas!'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e is DioException
+          ? (e.response?.data is Map ? e.response?.data['error']?.toString() : null) ??
+              'Erro ao guardar a receita.'
+          : 'Erro ao guardar a receita.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
+    } finally {
+      if (mounted) setState(() => _savingRecipe = false);
+    }
   }
 }
 
@@ -825,10 +856,21 @@ class _IngredientRow extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(
-                ing.name,
-                style: GoogleFonts.inter(
-                    fontSize: 14, color: context.appHeading),
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      ing.name,
+                      style: GoogleFonts.inter(
+                          fontSize: 14, color: context.appHeading),
+                    ),
+                  ),
+                  if (!ing.isMatched) ...[
+                    const SizedBox(width: 6),
+                    Icon(LucideIcons.triangleAlert,
+                        size: 13, color: Colors.orange.shade700),
+                  ],
+                ],
               ),
             ),
             Text(
