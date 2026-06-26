@@ -28,6 +28,16 @@ class AuthState {
 
   bool get isAuthenticated => accessToken != null;
 
+  String? get userId {
+    if (accessToken == null) return null;
+    try {
+      final payload = JwtDecoder.decode(accessToken!);
+      return payload['sub'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
   String? get tier {
     if (accessToken == null) return null;
     try {

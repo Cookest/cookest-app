@@ -8,8 +8,7 @@ import 'package:cookest_ui/cookest_ui.dart';
 import 'package:cookest/src/core/theme/app_colors.dart';
 import '../repositories/food_browse_repository.dart';
 import '../models/food_recipe.dart';
-
-
+import 'package:cookest/src/features/pantry/repositories/inventory_repository.dart';
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -17,12 +16,114 @@ class FoodRecipeDetailScreen extends ConsumerWidget {
   final int recipeId;
   const FoodRecipeDetailScreen({super.key, required this.recipeId});
 
+  void _showCookSheet(BuildContext context, FoodRecipeDetail recipe) {
+    if (recipe.steps.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('No step-by-step instructions available.')),
+      );
+      return;
+    }
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.appSurface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => _FoodCookingModeSheet(recipe: recipe),
+    );
+  }
+
+  Future<void> _markCooked(BuildContext context, WidgetRef ref, FoodRecipeDetail recipe) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref
+          .read(inventoryRepositoryProvider)
+          .cookRecipe(recipe.id.toString(), recipe.servings);
+      ref.invalidate(inventoryListProvider);
+      ref.invalidate(expiringCountProvider);
+      ref.invalidate(recipeSuggestionsProvider);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Marked as cooked — pantry updated.')),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not mark cooked: $e')),
+      );
+    }
+  }
+
+  Widget _buildBottomBar(BuildContext context, WidgetRef ref, FoodRecipeDetail recipe) {
+    final hasSteps = recipe.steps.isNotEmpty;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: context.appSurface,
+        border: Border(
+          top: BorderSide(color: context.appBorder, width: 1),
+        ),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        MediaQuery.of(context).padding.bottom + 12,
+      ),
+      child: Row(
+        children: [
+          // Mark Cooked icon button
+          Tooltip(
+            message: 'Mark as cooked',
+            child: Material(
+              color: context.appSurface,
+              borderRadius: BorderRadius.circular(12),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => _markCooked(context, ref, recipe),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: context.appBorder),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    LucideIcons.check,
+                    size: 20,
+                    color: context.appMuted,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Cook Now primary CTA
+          Expanded(
+            child: CkButton(
+              fullWidth: true,
+              size: CkButtonSize.lg,
+              iconLeft: const Icon(LucideIcons.chefHat, size: 18),
+              onPressed: hasSteps
+                  ? () => _showCookSheet(context, recipe)
+                  : null,
+              child: Text(
+                hasSteps ? 'Cook Now' : 'No Instructions',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(browseFoodDetailProvider(recipeId));
+    final recipeVal = detailAsync.valueOrNull;
 
     return Scaffold(
       backgroundColor: context.appBackground,
+      bottomNavigationBar: recipeVal != null ? _buildBottomBar(context, ref, recipeVal) : null,
       body: detailAsync.when(
         loading: () => const Center(child: CkSpinner()),
         error: (e, _) => Padding(
@@ -492,3 +593,180 @@ class _StepCard extends StatelessWidget {
     );
   }
 }
+
+class _FoodCookingModeSheet extends StatefulWidget {
+  final FoodRecipeDetail recipe;
+  const _FoodCookingModeSheet({required this.recipe});
+
+  @override
+  State<_FoodCookingModeSheet> createState() => _FoodCookingModeSheetState();
+}
+
+class _FoodCookingModeSheetState extends State<_FoodCookingModeSheet> {
+  int _currentStep = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final steps = widget.recipe.steps;
+    final step = steps[_currentStep];
+    final isFirst = _currentStep == 0;
+    final isLast = _currentStep == steps.length - 1;
+
+    return SizedBox(
+      height: MediaQuery.of(context).size.height * 0.9,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 12, bottom: 4),
+            child: Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: context.appBorder,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            child: Row(
+              children: [
+                Text(
+                  'Step ${step.stepNumber} of ${steps.length}',
+                  style: GoogleFonts.playfairDisplay(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: context.appHeading,
+                  ),
+                ),
+                const Spacer(),
+                if (step.durationMin != null)
+                  Row(children: [
+                    Icon(LucideIcons.clock,
+                        size: 14, color: context.appMuted),
+                    const SizedBox(width: 4),
+                    Text('${step.durationMin} min',
+                        style: TextStyle(
+                            color: context.appMuted, fontSize: 13)),
+                  ]),
+              ],
+            ),
+          ),
+          if (step.imageUrl != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: CachedNetworkImage(
+                  imageUrl: step.imageUrl!,
+                  height: 160,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(step.instruction,
+                      style:
+                          const TextStyle(fontSize: 16, height: 1.6)),
+                  if (step.tip != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: CookestTokens.colorPrimaryDEFAULT
+                            .withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(LucideIcons.lightbulb,
+                              size: 16,
+                              color: CookestTokens.colorPrimaryDEFAULT),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              step.tip!,
+                              style: TextStyle(
+                                  fontSize: 14,
+                                  color:
+                                      CookestTokens.colorPrimaryDEFAULT),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(steps.length, (i) {
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: i == _currentStep ? 16 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: i == _currentStep
+                      ? CookestTokens.colorPrimaryDEFAULT
+                      : context.appBorder,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              );
+            }),
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+                20, 16, 20, MediaQuery.of(context).padding.bottom + 16),
+            child: Row(
+              children: [
+                if (!isFirst) ...[
+                  Expanded(
+                    child: CkButton(
+                      variant: CkButtonVariant.secondary,
+                      iconLeft:
+                          const Icon(LucideIcons.arrowLeft, size: 16),
+                      onPressed: () =>
+                          setState(() => _currentStep--),
+                      child: const Text('Previous'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: isLast
+                      ? CkButton(
+                          iconLeft:
+                              const Icon(LucideIcons.check, size: 16),
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Done!'),
+                        )
+                      : CkButton(
+                          iconRight:
+                              const Icon(LucideIcons.arrowRight, size: 16),
+                          onPressed: () =>
+                              setState(() => _currentStep++),
+                          child: const Text('Next Step'),
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

@@ -90,6 +90,15 @@ class RecipeRepository {
       throw e.response?.data['error'] ?? 'Failed to upload recipe image.';
     }
   }
+
+  Future<Map<String, dynamic>> importRecipe(String id) async {
+    try {
+      final response = await _dio.post('/api/recipes/$id/import');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw e.response?.data['error'] ?? 'Failed to import recipe.';
+    }
+  }
 }
 
 final recipeRepositoryProvider = Provider<RecipeRepository>((ref) {

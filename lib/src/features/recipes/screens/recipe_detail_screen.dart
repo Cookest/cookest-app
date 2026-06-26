@@ -9,6 +9,10 @@ import 'package:cookest/src/core/theme/app_colors.dart';
 import 'package:cookest/src/features/pantry/repositories/inventory_repository.dart';
 import '../repositories/recipe_repository.dart';
 import '../models/recipe.dart';
+import '../../profile/screens/manage_recipes_screen.dart';
+import 'recipes_screen.dart';
+import '../../auth/providers/auth_provider.dart';
+
 
 final recipeDetailProvider = FutureProvider.family<Recipe, String>((ref, id) {
   return ref.watch(recipeRepositoryProvider).getRecipe(id);
@@ -24,6 +28,39 @@ class RecipeDetailScreen extends ConsumerStatefulWidget {
 
 class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
   bool _isFavorite = false;
+  bool _importing = false;
+
+  Future<void> _importRecipe(BuildContext context, Recipe recipe) async {
+    setState(() => _importing = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final res = await ref.read(recipeRepositoryProvider).importRecipe(recipe.id);
+      ref.invalidate(communityRecipesProvider);
+      ref.invalidate(myRecipesListProvider);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('${recipe.name} imported successfully!'),
+          action: SnackBarAction(
+            label: 'View',
+            onPressed: () {
+              final newId = res['id']?.toString();
+              if (newId != null && context.mounted) {
+                context.pushReplacement('/recipes/$newId');
+              }
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to import recipe: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _importing = false);
+      }
+    }
+  }
 
   void _showCookSheet(BuildContext context, Recipe recipe) {
     if (recipe.steps.isEmpty) {
@@ -65,18 +102,95 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
     }
   }
 
+  Widget _buildBottomBar(BuildContext context, Recipe recipe) {
+    final hasSteps = recipe.steps.isNotEmpty;
+    final currentUserId = ref.watch(authProvider).userId;
+    final isCommunityRecipe = recipe.authorId != null && recipe.authorId != currentUserId;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: context.appSurface,
+        border: Border(
+          top: BorderSide(color: context.appBorder, width: 1),
+        ),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        MediaQuery.of(context).padding.bottom + 12,
+      ),
+      child: Row(
+        children: [
+          // Mark Cooked icon button
+          Tooltip(
+            message: 'Mark as cooked',
+            child: Material(
+              color: context.appSurface,
+              borderRadius: BorderRadius.circular(12),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => _markCooked(context, recipe),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: context.appBorder),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    LucideIcons.check,
+                    size: 20,
+                    color: context.appMuted,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Import button for community recipes
+          if (isCommunityRecipe) ...[
+            Expanded(
+              child: CkButton(
+                size: CkButtonSize.lg,
+                variant: CkButtonVariant.secondary,
+                loading: _importing,
+                iconLeft: const Icon(LucideIcons.download, size: 18),
+                onPressed: () => _importRecipe(context, recipe),
+                child: const Text('Import Recipe'),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
+          // Cook Now primary CTA
+          Expanded(
+            child: CkButton(
+              fullWidth: true,
+              size: CkButtonSize.lg,
+              iconLeft: const Icon(LucideIcons.chefHat, size: 18),
+              onPressed: hasSteps
+                  ? () => _showCookSheet(context, recipe)
+                  : null,
+              child: Text(
+                hasSteps ? 'Cook Now' : 'No Instructions',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final recipeAsync = ref.watch(recipeDetailProvider(widget.recipeId));
+    final recipeVal = recipeAsync.valueOrNull;
 
-    return recipeAsync.when(
-      loading: () => Scaffold(
-        backgroundColor: context.appBackground,
-        body: const Center(child: CkSpinner()),
-      ),
-      error: (e, _) => Scaffold(
-        backgroundColor: context.appBackground,
-        body: SafeArea(
+    return Scaffold(
+      backgroundColor: context.appBackground,
+      bottomNavigationBar: recipeVal != null ? _buildBottomBar(context, recipeVal) : null,
+      body: recipeAsync.when(
+        loading: () => const Center(child: CkSpinner()),
+        error: (e, _) => SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -92,72 +206,9 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
             ),
           ),
         ),
-      ),
-      data: (recipe) {
-        final heroUrl = recipe.bestImageUrl;
-        final hasSteps = recipe.steps.isNotEmpty;
-
-        return Scaffold(
-          backgroundColor: context.appBackground,
-          // ── Sticky "Cook Now" bottom bar ──────────────────────────────
-          bottomNavigationBar: Container(
-            decoration: BoxDecoration(
-              color: context.appSurface,
-              border: Border(
-                top: BorderSide(color: context.appBorder, width: 1),
-              ),
-            ),
-            padding: EdgeInsets.fromLTRB(
-              16,
-              12,
-              16,
-              MediaQuery.of(context).padding.bottom + 12,
-            ),
-            child: Row(
-              children: [
-                // Mark Cooked icon button
-                Tooltip(
-                  message: 'Mark as cooked',
-                  child: Material(
-                    color: context.appSurface,
-                    borderRadius: BorderRadius.circular(12),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () => _markCooked(context, recipe),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: context.appBorder),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          LucideIcons.check,
-                          size: 20,
-                          color: context.appMuted,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Cook Now primary CTA
-                Expanded(
-                  child: CkButton(
-                    fullWidth: true,
-                    size: CkButtonSize.lg,
-                    iconLeft: const Icon(LucideIcons.chefHat, size: 18),
-                    onPressed: hasSteps
-                        ? () => _showCookSheet(context, recipe)
-                        : null,
-                    child: Text(
-                      hasSteps ? 'Cook Now' : 'No Instructions',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          body: CustomScrollView(
+        data: (recipe) {
+          final heroUrl = recipe.bestImageUrl;
+          return CustomScrollView(
             slivers: [
               // ── Hero image app bar ─────────────────────────────────────
               SliverAppBar(
@@ -547,9 +598,9 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                 ),
               ),
             ],
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

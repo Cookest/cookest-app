@@ -162,6 +162,7 @@ class Recipe {
   final bool isDairyFree;
   final bool isNutFree;
   final bool isPublic;
+  final String? authorId;
   final double? matchPct;
   final String? primaryImageUrl;
   final List<RecipeImage> images;
@@ -188,6 +189,7 @@ class Recipe {
     this.isDairyFree = false,
     this.isNutFree = false,
     this.isPublic = false,
+    this.authorId,
     this.matchPct,
     this.primaryImageUrl,
     this.images = const [],
@@ -216,6 +218,7 @@ class Recipe {
       isDairyFree: json['is_dairy_free'] as bool? ?? false,
       isNutFree: json['is_nut_free'] as bool? ?? false,
       isPublic: json['is_public'] as bool? ?? false,
+      authorId: json['author_id']?.toString(),
       matchPct: json['match_pct'] != null ? double.tryParse(json['match_pct'].toString()) : null,
       primaryImageUrl: json['primary_image_url']?.toString(),
       images: (json['images'] as List? ?? [])
