@@ -69,11 +69,14 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
   Widget build(BuildContext context) {
     final recipeAsync = ref.watch(recipeDetailProvider(widget.recipeId));
 
-    return Scaffold(
-      backgroundColor: context.appBackground,
-      body: recipeAsync.when(
-        loading: () => const Center(child: CkSpinner()),
-        error: (e, _) => SafeArea(
+    return recipeAsync.when(
+      loading: () => Scaffold(
+        backgroundColor: context.appBackground,
+        body: const Center(child: CkSpinner()),
+      ),
+      error: (e, _) => Scaffold(
+        backgroundColor: context.appBackground,
+        body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -89,82 +92,206 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
             ),
           ),
         ),
-        data: (recipe) {
-          final heroUrl = recipe.bestImageUrl;
-          return CustomScrollView(
+      ),
+      data: (recipe) {
+        final heroUrl = recipe.bestImageUrl;
+        final hasSteps = recipe.steps.isNotEmpty;
+
+        return Scaffold(
+          backgroundColor: context.appBackground,
+          // ── Sticky "Cook Now" bottom bar ──────────────────────────────
+          bottomNavigationBar: Container(
+            decoration: BoxDecoration(
+              color: context.appSurface,
+              border: Border(
+                top: BorderSide(color: context.appBorder, width: 1),
+              ),
+            ),
+            padding: EdgeInsets.fromLTRB(
+              16,
+              12,
+              16,
+              MediaQuery.of(context).padding.bottom + 12,
+            ),
+            child: Row(
+              children: [
+                // Mark Cooked icon button
+                Tooltip(
+                  message: 'Mark as cooked',
+                  child: Material(
+                    color: context.appSurface,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => _markCooked(context, recipe),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: context.appBorder),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          LucideIcons.check,
+                          size: 20,
+                          color: context.appMuted,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Cook Now primary CTA
+                Expanded(
+                  child: CkButton(
+                    fullWidth: true,
+                    size: CkButtonSize.lg,
+                    iconLeft: const Icon(LucideIcons.chefHat, size: 18),
+                    onPressed: hasSteps
+                        ? () => _showCookSheet(context, recipe)
+                        : null,
+                    child: Text(
+                      hasSteps ? 'Cook Now' : 'No Instructions',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          body: CustomScrollView(
             slivers: [
+              // ── Hero image app bar ─────────────────────────────────────
               SliverAppBar(
-                backgroundColor: context.appBackground,
-                expandedHeight: heroUrl != null ? 260 : kToolbarHeight,
+                backgroundColor: heroUrl != null
+                    ? Colors.transparent
+                    : context.appBackground,
+                expandedHeight: heroUrl != null ? 280 : kToolbarHeight,
                 pinned: true,
-                leading: IconButton(
-                  icon: const Icon(LucideIcons.arrowLeft),
-                  onPressed: () => context.pop(),
+                leading: Container(
+                  margin: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black26,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: const Icon(LucideIcons.arrowLeft,
+                        color: Colors.white),
+                    onPressed: () => context.pop(),
+                  ),
                 ),
                 actions: [
-                  IconButton(
-                    tooltip: 'Mark cooked',
-                    icon: const Icon(LucideIcons.check),
-                    onPressed: () => _markCooked(context, recipe),
-                  ),
-                  IconButton(
-                    icon: Icon(
-                      LucideIcons.heart,
-                      color: _isFavorite
-                          ? CookestTokens.colorStatusError
-                          : context.appMuted,
+                  Container(
+                    margin: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black26,
+                      shape: BoxShape.circle,
                     ),
-                    onPressed: () =>
-                        setState(() => _isFavorite = !_isFavorite),
+                    child: IconButton(
+                      icon: Icon(
+                        _isFavorite
+                            ? LucideIcons.heart
+                            : LucideIcons.heart,
+                        color: _isFavorite
+                            ? CookestTokens.colorStatusError
+                            : Colors.white,
+                      ),
+                      onPressed: () =>
+                          setState(() => _isFavorite = !_isFavorite),
+                    ),
                   ),
                 ],
-                title: Text(
-                  recipe.name,
-                  style: GoogleFonts.playfairDisplay(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: context.appHeading,
-                  ),
-                ),
                 flexibleSpace: heroUrl != null
                     ? FlexibleSpaceBar(
+                        titlePadding: EdgeInsets.zero,
                         background: Stack(
                           fit: StackFit.expand,
                           children: [
                             CachedNetworkImage(
                               imageUrl: heroUrl,
                               fit: BoxFit.cover,
-                              placeholder: (context, url) =>
-                                  Container(color: context.appSurface),
-                              errorWidget: (context, url, error) => Container(
+                              placeholder: (context, url) => Container(
                                 color: context.appSurface,
-                                child: Icon(LucideIcons.utensils,
-                                    size: 48, color: context.appMuted),
+                                child: const Center(
+                                    child: CircularProgressIndicator()),
+                              ),
+                              errorWidget: (context, url, error) =>
+                                  Container(
+                                color: context.appSurface,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(LucideIcons.utensils,
+                                        size: 48,
+                                        color: context.appMuted),
+                                    const SizedBox(height: 8),
+                                    Text('Image unavailable',
+                                        style: TextStyle(
+                                            color: context.appMuted,
+                                            fontSize: 12)),
+                                  ],
+                                ),
                               ),
                             ),
+                            // Gradient overlay for readability
                             const DecoratedBox(
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
+                                  stops: [0.0, 0.5, 1.0],
                                   colors: [
-                                    Colors.transparent,
                                     Colors.black38,
+                                    Colors.transparent,
+                                    Colors.black54,
                                   ],
                                 ),
+                              ),
+                            ),
+                            // Recipe title at bottom of image
+                            Positioned(
+                              bottom: 16,
+                              left: 16,
+                              right: 16,
+                              child: Text(
+                                recipe.name,
+                                style: GoogleFonts.playfairDisplay(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  shadows: [
+                                    const Shadow(
+                                      blurRadius: 8,
+                                      color: Colors.black54,
+                                    ),
+                                  ],
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
                         ),
                       )
-                    : null,
+                    : FlexibleSpaceBar(
+                        title: Text(
+                          recipe.name,
+                          style: GoogleFonts.playfairDisplay(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: context.appHeading,
+                          ),
+                        ),
+                        titlePadding: const EdgeInsets.only(
+                            left: 60, bottom: 16, right: 60),
+                      ),
               ),
+
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // ── Dietary/Category badges ────────────────────────
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
@@ -208,6 +335,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                         ],
                       ),
                       const SizedBox(height: 14),
+                      // ── Quick stats row ────────────────────────────────
                       Row(
                         children: [
                           if (recipe.totalTimeMin != null) ...[
@@ -255,6 +383,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                         _NutritionCard(nutrition: recipe.nutrition!),
                       ],
                       const SizedBox(height: 20),
+                      // ── Ingredients ────────────────────────────────────
                       Text(
                         'Ingredients',
                         style:
@@ -304,6 +433,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                               ),
                       ),
                       const SizedBox(height: 20),
+                      // ── Instructions ───────────────────────────────────
                       Text(
                         'Instructions',
                         style:
@@ -410,25 +540,16 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                             ),
                           ),
                         ),
+                      // Extra bottom padding to clear the sticky bar
                       const SizedBox(height: 24),
-                      CkButton(
-                        fullWidth: true,
-                        size: CkButtonSize.lg,
-                        iconLeft: const Icon(LucideIcons.chefHat),
-                        onPressed: recipe.steps.isEmpty
-                            ? null
-                            : () => _showCookSheet(context, recipe),
-                        child: const Text('Start Cooking'),
-                      ),
-                      const SizedBox(height: 32),
                     ],
                   ),
                 ),
               ),
             ],
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }
