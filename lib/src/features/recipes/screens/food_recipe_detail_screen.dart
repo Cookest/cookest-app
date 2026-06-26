@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +7,6 @@ import 'package:cookest_ui/cookest_ui.dart';
 import 'package:cookest/src/core/theme/app_colors.dart';
 import '../repositories/food_browse_repository.dart';
 import '../models/food_recipe.dart';
-import 'package:cookest/src/features/pantry/repositories/inventory_repository.dart';
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -34,26 +32,6 @@ class FoodRecipeDetailScreen extends ConsumerWidget {
       builder: (ctx) => _FoodCookingModeSheet(recipe: recipe),
     );
   }
-
-  Future<void> _markCooked(BuildContext context, WidgetRef ref, FoodRecipeDetail recipe) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await ref
-          .read(inventoryRepositoryProvider)
-          .cookRecipe(recipe.id.toString(), recipe.servings);
-      ref.invalidate(inventoryListProvider);
-      ref.invalidate(expiringCountProvider);
-      ref.invalidate(recipeSuggestionsProvider);
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Marked as cooked — pantry updated.')),
-      );
-    } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Could not mark cooked: $e')),
-      );
-    }
-  }
-
   Widget _buildBottomBar(BuildContext context, WidgetRef ref, FoodRecipeDetail recipe) {
     final hasSteps = recipe.steps.isNotEmpty;
 
@@ -72,31 +50,6 @@ class FoodRecipeDetailScreen extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          // Mark Cooked icon button
-          Tooltip(
-            message: 'Mark as cooked',
-            child: Material(
-              color: context.appSurface,
-              borderRadius: BorderRadius.circular(12),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => _markCooked(context, ref, recipe),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: context.appBorder),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    LucideIcons.check,
-                    size: 20,
-                    color: context.appMuted,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
           // Cook Now primary CTA
           Expanded(
             child: CkButton(

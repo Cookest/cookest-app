@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:cookest_ui/cookest_ui.dart';
 import 'package:cookest/src/core/theme/app_colors.dart';
-import 'package:cookest/src/features/pantry/repositories/inventory_repository.dart';
 import '../repositories/recipe_repository.dart';
 import '../models/recipe.dart';
 import '../../profile/screens/manage_recipes_screen.dart';
@@ -80,28 +79,6 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
       builder: (ctx) => _CookingModeSheet(recipe: recipe),
     );
   }
-
-  /// Record that the user cooked this recipe. The backend deducts the
-  /// recipe's ingredients from the pantry (FIFO/expiry-aware).
-  Future<void> _markCooked(BuildContext context, Recipe recipe) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await ref
-          .read(inventoryRepositoryProvider)
-          .cookRecipe(widget.recipeId, recipe.servings);
-      ref.invalidate(inventoryListProvider);
-      ref.invalidate(expiringCountProvider);
-      ref.invalidate(recipeSuggestionsProvider);
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Marked as cooked — pantry updated.')),
-      );
-    } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Could not mark cooked: $e')),
-      );
-    }
-  }
-
   Widget _buildBottomBar(BuildContext context, Recipe recipe) {
     final hasSteps = recipe.steps.isNotEmpty;
     final currentUserId = ref.watch(authProvider).userId;
@@ -122,31 +99,6 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
       ),
       child: Row(
         children: [
-          // Mark Cooked icon button
-          Tooltip(
-            message: 'Mark as cooked',
-            child: Material(
-              color: context.appSurface,
-              borderRadius: BorderRadius.circular(12),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => _markCooked(context, recipe),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: context.appBorder),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    LucideIcons.check,
-                    size: 20,
-                    color: context.appMuted,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
           // Import button for community recipes
           if (isCommunityRecipe) ...[
             Expanded(
