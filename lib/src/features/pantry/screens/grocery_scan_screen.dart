@@ -69,7 +69,11 @@ class _GroceryScanScreenState extends ConsumerState<GroceryScanScreen> {
         });
       }
     } catch (e) {
-      _setError('Scan failed: $e');
+      if (e.toString().contains('Pro')) {
+        if (mounted) context.push('/paywall');
+      } else {
+        _setError('Scan failed: $e');
+      }
     }
   }
 

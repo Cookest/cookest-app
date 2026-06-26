@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:cookest/src/features/meal_plan/repositories/meal_plan_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:cookest_ui/cookest_ui.dart';
@@ -190,17 +191,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         ref.invalidate(currentMealPlanProvider);
       }
     } catch (e) {
-      ref.read(chatMessagesProvider.notifier).update(
-            (msgs) => [
-              ...msgs,
-              ChatMessage(
-                text: e.toString(),
-                isUser: false,
-                timestamp: DateTime.now(),
-                isError: true,
-              ),
-            ],
-          );
+      if (e.toString().contains('Pro')) {
+        if (mounted) context.push('/paywall');
+      } else {
+        ref.read(chatMessagesProvider.notifier).update(
+              (msgs) => [
+                ...msgs,
+                ChatMessage(
+                  text: e.toString(),
+                  isUser: false,
+                  timestamp: DateTime.now(),
+                  isError: true,
+                ),
+              ],
+            );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
       Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);

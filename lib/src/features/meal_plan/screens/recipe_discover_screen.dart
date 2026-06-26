@@ -157,11 +157,15 @@ class _RecipeDiscoverScreenState extends ConsumerState<RecipeDiscoverScreen>
         _recipes.addAll(loaded.isNotEmpty ? loaded : _fallbackRecipes);
         _isLoading = false;
       });
-    } catch (_) {
-      setState(() {
-        _recipes.addAll(_fallbackRecipes);
-        _isLoading = false;
-      });
+    } catch (e) {
+      if (e.toString().contains('Pro')) {
+        if (mounted) context.push('/paywall');
+      } else {
+        setState(() {
+          _recipes.addAll(_fallbackRecipes);
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -711,7 +715,11 @@ class _AIFitSheetState extends ConsumerState<_AIFitSheet> {
         const SnackBar(content: Text('Added to your meal plan!')),
       );
     } catch (e) {
-      setState(() => _error = 'Failed to add: $e');
+      if (e.toString().contains('Pro')) {
+        if (mounted) context.push('/paywall');
+      } else {
+        setState(() => _error = 'Failed to add: $e');
+      }
     }
   }
 

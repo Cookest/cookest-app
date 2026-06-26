@@ -1,6 +1,7 @@
 import 'package:cookest_ui/cookest_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../shopping_list/repositories/shopping_repository.dart';
@@ -28,10 +29,17 @@ class WhatToBuyScreen extends ConsumerWidget {
             ],
           ),
         ),
-        error: (_, _) => Center(
-          child: Text('Could not get suggestions',
-              style: TextStyle(color: context.appMuted)),
-        ),
+        error: (e, _) {
+          if (e.toString().contains('Pro')) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) context.push('/paywall');
+            });
+          }
+          return Center(
+            child: Text('Could not get suggestions',
+                style: TextStyle(color: context.appMuted)),
+          );
+        },
         data: (items) {
           if (items.isEmpty) {
             return Center(
