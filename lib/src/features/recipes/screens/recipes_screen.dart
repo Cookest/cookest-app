@@ -13,18 +13,23 @@ import '../models/recipe.dart';
 import '../models/food_recipe.dart';
 import 'generate_recipe_screen.dart';
 
-final recipeSearchProvider = StateProvider<String>((ref) => '');
-final recipeMatchInventoryProvider = StateProvider<bool>((ref) => false);
-final recipeCategoryProvider = StateProvider<String>((ref) => 'All');
+final globalSearchProvider = StateProvider<String>((ref) => '');
+final globalCuisineProvider = StateProvider<String?>((ref) => null);
+final globalCategoryProvider = StateProvider<String?>((ref) => null);
 
-final recipesListProvider = FutureProvider<List<Recipe>>((ref) {
-  final query = ref.watch(recipeSearchProvider);
-  final matchInventory = ref.watch(recipeMatchInventoryProvider);
-  final category = ref.watch(recipeCategoryProvider);
-  return ref.watch(recipeRepositoryProvider).getMyRecipes(
+final globalRecipesProvider = FutureProvider<List<FoodRecipeListItem>>((ref) async {
+  final query = ref.watch(globalSearchProvider);
+  final cuisine = ref.watch(globalCuisineProvider);
+  final category = ref.watch(globalCategoryProvider);
+  
+  final res = await ref.watch(foodBrowseRepositoryProvider).searchRecipes(
     q: query.isEmpty ? null : query,
-    category: category == 'All' ? null : category,
+    cuisine: cuisine,
+    category: category,
+    page: 1,
+    perPage: 30,
   );
+  return res.recipes;
 });
 
 final communitySearchProvider = StateProvider<String>((ref) => '');
@@ -51,8 +56,7 @@ class RecipesScreen extends ConsumerStatefulWidget {
 }
 
 class _RecipesScreenState extends ConsumerState<RecipesScreen> {
-  static const _categories = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Snack'];
-  String _activeTab = 'my';
+  String _activeTab = 'global';
   Timer? _debounce;
   Timer? _browseDebounce;
 
@@ -71,7 +75,7 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
   void _onSearchChanged(String value) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
-      ref.read(recipeSearchProvider.notifier).state = value;
+      ref.read(globalSearchProvider.notifier).state = value;
     });
   }
 
@@ -133,17 +137,15 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
               fullWidth: true,
               onChanged: (id) => setState(() => _activeTab = id),
               items: const [
-                CkTabItem(id: 'my', label: 'Recipes'),
+                CkTabItem(id: 'global', label: 'Global Recipes'),
                 CkTabItem(id: 'browse', label: 'Browse Community'),
               ],
             ),
           ),
           Expanded(
-            child: _activeTab == 'my'
-                ? _MyRecipesTab(
-                    categories: _categories,
+            child: _activeTab == 'global'
+                ? _GlobalTab(
                     onSearchChanged: _onSearchChanged,
-                    onShowFilter: () => _showPantryFilterModal(context, ref),
                   )
                 : _BrowseTab(onSearchChanged: _onBrowseSearchChanged),
           ),
@@ -151,82 +153,33 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
       ),
     );
   }
-
-  void _showPantryFilterModal(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
-      context: context,
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Filter Recipes',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Only show recipes I can make',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
-                  CkToggle(
-                    value: ref.watch(recipeMatchInventoryProvider),
-                    onChanged: (val) {
-                      ref.read(recipeMatchInventoryProvider.notifier).state = val;
-                      Navigator.pop(context);
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Shows only recipes where you have most ingredients in pantry',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: context.appMuted),
-              ),
-              const SizedBox(height: 16),
-              CkButton(
-                variant: CkButtonVariant.ghost,
-                fullWidth: true,
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Done'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
-// ── Recipes Tab ──────────────────────────────────────────────────────────
+// ── Global Tab ───────────────────────────────────────────────────────────────
 
-class _MyRecipesTab extends ConsumerWidget {
-  final List<String> categories;
+class _GlobalTab extends ConsumerStatefulWidget {
   final ValueChanged<String> onSearchChanged;
-  final VoidCallback onShowFilter;
 
-  const _MyRecipesTab({
-    required this.categories,
+  const _GlobalTab({
     required this.onSearchChanged,
-    required this.onShowFilter,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final recipesAsync = ref.watch(recipesListProvider);
-    final selectedCategory = ref.watch(recipeCategoryProvider);
-    final matchInventory = ref.watch(recipeMatchInventoryProvider);
+  ConsumerState<_GlobalTab> createState() => _GlobalTabState();
+}
+
+class _GlobalTabState extends ConsumerState<_GlobalTab> {
+  static const _cuisines = [
+    'All', 'Italian', 'French', 'Spanish', 'Portuguese',
+    'Mexican', 'Chinese', 'Japanese', 'Indian', 'American',
+  ];
+  static const _categories = ['All', 'Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'];
+
+  @override
+  Widget build(BuildContext context) {
+    final recipesAsync = ref.watch(globalRecipesProvider);
+    final selectedCuisine = ref.watch(globalCuisineProvider);
+    final selectedCategory = ref.watch(globalCategoryProvider);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -234,79 +187,71 @@ class _MyRecipesTab extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: CkInput(
-                  placeholder: 'Search recipes...',
-                  iconLeft: const Icon(LucideIcons.search, size: 16),
-                  fullWidth: true,
-                  onChanged: onSearchChanged,
-                ),
-              ),
-              const SizedBox(width: 8),
-              CkButton(
-                variant: matchInventory
-                    ? CkButtonVariant.primary
-                    : CkButtonVariant.secondary,
-                size: CkButtonSize.sm,
-                onPressed: onShowFilter,
-                child: Icon(
-                  LucideIcons.filter,
-                  size: 18,
-                  color: matchInventory
-                      ? Colors.white
-                      : context.appMuted,
-                ),
-              ),
-            ],
+          CkInput(
+            placeholder: 'Search global recipes...',
+            iconLeft: const Icon(LucideIcons.search, size: 16),
+            fullWidth: true,
+            onChanged: widget.onSearchChanged,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
+          // Cuisine filter chips
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: categories.map((cat) {
-                final isSelected = selectedCategory == cat;
+              children: _cuisines.map((c) {
+                final isAll = c == 'All';
+                final isSelected = isAll
+                    ? selectedCuisine == null
+                    : selectedCuisine == c;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: GestureDetector(
                     onTap: () {
-                      ref.read(recipeCategoryProvider.notifier).state = cat;
+                      ref.read(globalCuisineProvider.notifier).state =
+                          isAll ? null : c;
                     },
                     child: CkBadge(
                       variant: isSelected
                           ? CkBadgeVariant.success
                           : CkBadgeVariant.standard,
-                      size: CkBadgeSize.md,
-                      child: Text(cat),
+                      size: CkBadgeSize.sm,
+                      child: Text(c),
                     ),
                   ),
                 );
               }).toList(),
             ),
           ),
-          if (matchInventory) ...[
-            const SizedBox(height: 8),
-            CkBadge(
-              variant: CkBadgeVariant.success,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(LucideIcons.checkCircle, size: 14),
-                  const SizedBox(width: 6),
-                  const Text('Showing pantry matches'),
-                  const SizedBox(width: 6),
-                  GestureDetector(
+          const SizedBox(height: 6),
+          // Category filter chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _categories.map((c) {
+                final isAll = c == 'All';
+                final isSelected = isAll
+                    ? selectedCategory == null
+                    : selectedCategory == c;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: GestureDetector(
                     onTap: () {
-                      ref.read(recipeMatchInventoryProvider.notifier).state = false;
+                      ref.read(globalCategoryProvider.notifier).state =
+                          isAll ? null : c;
                     },
-                    child: const Icon(LucideIcons.x, size: 14),
+                    child: CkBadge(
+                      variant: isSelected
+                          ? CkBadgeVariant.info
+                          : CkBadgeVariant.standard,
+                      size: CkBadgeSize.sm,
+                      child: Text(c),
+                    ),
                   ),
-                ],
-              ),
+                );
+              }).toList(),
             ),
-          ],
-          const SizedBox(height: 16),
+          ),
+          const SizedBox(height: 12),
           Expanded(
             child: recipesAsync.when(
               loading: () => ListView(
@@ -318,22 +263,36 @@ class _MyRecipesTab extends ConsumerWidget {
                   CkSkeletonCard(),
                 ],
               ),
-              error: (e, _) => CkAlert(
-                variant: CkAlertVariant.error,
-                child: Text('Failed to load recipes: $e'),
+              error: (e, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: CkAlert(
+                    variant: CkAlertVariant.error,
+                    child: Text('Failed to load recipes: $e'),
+                  ),
+                ),
               ),
-              data: (recipes) => recipes.isEmpty
-                  ? _EmptyRecipes(onBrowse: () {})
-                  : ListView.builder(
-                      itemCount: recipes.length,
-                      itemBuilder: (context, index) {
-                        final recipe = recipes[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _RecipeListCard(recipe: recipe),
-                        );
-                      },
-                    ),
+              data: (recipes) => Column(
+                children: [
+                  Expanded(
+                    child: recipes.isEmpty
+                        ? Center(
+                            child: Text('No global recipes found',
+                                style: TextStyle(color: context.appMuted)),
+                          )
+                        : ListView.builder(
+                            itemCount: recipes.length,
+                            itemBuilder: (context, index) {
+                              final recipe = recipes[index];
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _FoodRecipeCard(item: recipe),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -642,30 +601,4 @@ class _FoodRecipeCard extends StatelessWidget {
         ),
         child: Icon(LucideIcons.utensils, size: 24, color: context.appMuted),
       );
-}
-
-// ── Empty state ───────────────────────────────────────────────────────────────
-
-class _EmptyRecipes extends StatelessWidget {
-  final VoidCallback onBrowse;
-  const _EmptyRecipes({required this.onBrowse});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(LucideIcons.bookOpen, size: 48, color: context.appMuted),
-          const SizedBox(height: 12),
-          Text('No recipes yet',
-              style: TextStyle(color: context.appMuted, fontSize: 16)),
-          const SizedBox(height: 4),
-          Text('Browse the food database to discover recipes',
-              style: TextStyle(color: context.appMuted, fontSize: 12),
-              textAlign: TextAlign.center),
-        ],
-      ),
-    );
-  }
 }

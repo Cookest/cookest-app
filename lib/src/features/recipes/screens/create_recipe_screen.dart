@@ -103,7 +103,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
       }
 
       // refresh recipes
-      ref.invalidate(recipesListProvider);
+      ref.invalidate(communityRecipesProvider);
       if (mounted) context.pop();
     } catch (e) {
       if (e.toString().contains('Pro')) {

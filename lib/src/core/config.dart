@@ -10,9 +10,9 @@ class AppConfig {
   static String _runtimeUrl = '';
   static String _themeModeStr = 'system';
 
-  /// Returns: custom URL if set, else devBaseUrl.
+  /// Returns: custom URL if set, else prodBaseUrl (api.cookest.app).
   static String get baseUrl =>
-      _runtimeUrl.isNotEmpty ? _runtimeUrl : devBaseUrl;
+      _runtimeUrl.isNotEmpty ? _runtimeUrl : prodBaseUrl;
 
   /// Returns the saved theme mode preference.
   static String get themeModeStr => _themeModeStr;
