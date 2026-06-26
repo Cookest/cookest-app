@@ -3,10 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:dio/dio.dart';
 import 'package:cookest_ui/cookest_ui.dart';
 import 'package:cookest/src/core/theme/app_colors.dart';
-import '../../../core/api/api_client.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class PaywallScreen extends ConsumerStatefulWidget {
   const PaywallScreen({super.key});
@@ -16,34 +15,19 @@ class PaywallScreen extends ConsumerStatefulWidget {
 }
 
 class _PaywallScreenState extends ConsumerState<PaywallScreen> {
-  bool _isLoading = false;
+  final bool _isLoading = false;
   String? _loadingTier;
 
   Future<void> _checkout(String tier) async {
-    setState(() {
-      _isLoading = true;
-      _loadingTier = tier;
-    });
-    final messenger = ScaffoldMessenger.of(context);
-    final router = GoRouter.of(context);
-    try {
-      final response = await ref.read(dioProvider).post(
-        '/api/subscription/checkout',
-        data: {'tier': tier},
-      );
-      final url = response.data['url'] as String;
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Redirecting to Stripe checkout: $url')),
-      );
-      router.pop();
-    } on DioException catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Error: ${e.response?.data['error'] ?? e.message}')),
-      );
-    } finally {
-      if (mounted) setState(() { _isLoading = false; _loadingTier = null; });
+    final url = Uri.parse('https://cookest.app/pricing');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open pricing page')),
+        );
+      }
     }
   }
 
