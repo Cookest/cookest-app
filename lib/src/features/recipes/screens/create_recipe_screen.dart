@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,8 +8,26 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cookest_ui/cookest_ui.dart';
 import 'package:cookest/src/core/theme/app_colors.dart';
+import 'package:cookest/src/features/pantry/models/inventory_item.dart'
+    show IngredientSuggestion;
+import 'package:cookest/src/features/pantry/repositories/inventory_repository.dart';
 import '../repositories/recipe_repository.dart';
 import 'recipes_screen.dart';
+
+const _recipeUnits = ['g', 'kg', 'ml', 'l', 'pcs', 'cup', 'tbsp', 'tsp', 'clove', 'pinch', 'can', 'pack'];
+
+/// One ingredient row in the recipe builder — a catalog ingredient (id + name)
+/// plus an optional quantity and unit.
+class _RecipeIngredientEntry {
+  final int id;
+  final String name;
+  final TextEditingController quantity;
+  String unit;
+
+  _RecipeIngredientEntry({required this.id, required this.name, String? unit})
+      : quantity = TextEditingController(),
+        unit = unit ?? 'g';
+}
 
 class CreateRecipeScreen extends ConsumerStatefulWidget {
   const CreateRecipeScreen({super.key});
@@ -25,7 +44,7 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
   final _instructionsController = TextEditingController();
 
   String _difficulty = 'easy';
-  final List<TextEditingController> _ingredientControllers = [TextEditingController()];
+  final List<_RecipeIngredientEntry> _ingredients = [];
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -46,10 +65,19 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
     _prepTimeController.dispose();
     _cookTimeController.dispose();
     _instructionsController.dispose();
-    for (final c in _ingredientControllers) {
-      c.dispose();
+    for (final e in _ingredients) {
+      e.quantity.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _addIngredient() async {
+    final picked = await showIngredientPickerSheet(context, ref);
+    if (picked == null) return;
+    if (_ingredients.any((e) => e.id == picked.id)) return; // no duplicates
+    setState(() {
+      _ingredients.add(_RecipeIngredientEntry(id: picked.id, name: picked.name));
+    });
   }
 
   Future<void> _submit() async {
@@ -59,14 +87,12 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
       return;
     }
 
-    final ingredients = _ingredientControllers
-        .map((c) => c.text.trim())
-        .where((s) => s.isNotEmpty)
-        .map((s) => {
-          'ingredient_name': s,
-          'quantity': null,
-          'unit': null,
-        })
+    final ingredients = _ingredients
+        .map((e) => {
+              'ingredient_id': e.id,
+              'quantity': double.tryParse(e.quantity.text.trim()),
+              'unit': e.unit,
+            })
         .toList();
 
     final steps = _instructionsController.text
@@ -238,41 +264,69 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
                     fontWeight: FontWeight.w600,
                   ),
             ),
+            const SizedBox(height: 4),
+            Text(
+              'Pick ingredients from the catalog so recipes stay consistent.',
+              style: TextStyle(color: context.appMuted, fontSize: 12),
+            ),
             const SizedBox(height: 8),
             Column(
-              children: List.generate(_ingredientControllers.length, (i) {
+              children: List.generate(_ingredients.length, (i) {
+                final e = _ingredients[i];
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Expanded(
+                        flex: 4,
+                        child: Text(
+                          e.name,
+                          style: TextStyle(
+                            color: context.appHeading,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
                         child: CkInput(
-                          controller: _ingredientControllers[i],
-                          placeholder: 'e.g. 2 cups flour',
+                          controller: e.quantity,
+                          placeholder: 'Qty',
+                          keyboardType:
+                              const TextInputType.numberWithOptions(decimal: true),
                           fullWidth: true,
                         ),
                       ),
-                      if (_ingredientControllers.length > 1)
-                        IconButton(
-                          icon: const Icon(LucideIcons.trash2, size: 18),
-                          onPressed: () {
-                            setState(() {
-                              _ingredientControllers[i].dispose();
-                              _ingredientControllers.removeAt(i);
-                            });
-                          },
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 3,
+                        child: CkSelect(
+                          placeholder: 'Unit',
+                          value: e.unit,
+                          options: _recipeUnits
+                              .map((u) => CkSelectOption(value: u, label: u))
+                              .toList(),
+                          onChanged: (val) => setState(() => e.unit = val),
                         ),
+                      ),
+                      IconButton(
+                        icon: const Icon(LucideIcons.trash2, size: 18),
+                        onPressed: () {
+                          setState(() {
+                            e.quantity.dispose();
+                            _ingredients.removeAt(i);
+                          });
+                        },
+                      ),
                     ],
                   ),
                 );
               }),
             ),
             TextButton.icon(
-              onPressed: () {
-                setState(() {
-                  _ingredientControllers.add(TextEditingController());
-                });
-              },
+              onPressed: _addIngredient,
               icon: const Icon(LucideIcons.plus, size: 16),
               label: const Text('Add ingredient'),
             ),
@@ -293,6 +347,138 @@ class _CreateRecipeScreenState extends ConsumerState<CreateRecipeScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Opens a catalog search sheet and returns the chosen ingredient (or null).
+Future<IngredientSuggestion?> showIngredientPickerSheet(
+    BuildContext context, WidgetRef ref) {
+  return showModalBottomSheet<IngredientSuggestion>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => const _IngredientPickerSheet(),
+  );
+}
+
+class _IngredientPickerSheet extends ConsumerStatefulWidget {
+  const _IngredientPickerSheet();
+
+  @override
+  ConsumerState<_IngredientPickerSheet> createState() => _IngredientPickerSheetState();
+}
+
+class _IngredientPickerSheetState extends ConsumerState<_IngredientPickerSheet> {
+  final _controller = TextEditingController();
+  final _focusNode = FocusNode();
+  List<IngredientSuggestion> _results = [];
+  bool _loading = false;
+  Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.requestFocus();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onChanged(String q) {
+    _debounce?.cancel();
+    if (q.trim().length < 2) {
+      setState(() => _results = []);
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 300), () async {
+      setState(() => _loading = true);
+      try {
+        final results =
+            await ref.read(inventoryRepositoryProvider).searchIngredients(q);
+        if (mounted) setState(() => _results = results);
+      } catch (_) {
+      } finally {
+        if (mounted) setState(() => _loading = false);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      decoration: BoxDecoration(
+        color: context.appBackground,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.only(left: 20, right: 20, top: 16, bottom: 16 + bottomInset),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: context.appBorder,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Find an ingredient',
+            style: GoogleFonts.playfairDisplay(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: context.appHeading,
+            ),
+          ),
+          const SizedBox(height: 12),
+          CkInput(
+            controller: _controller,
+            placeholder: 'Search the catalog...',
+            fullWidth: true,
+            iconLeft: const Icon(LucideIcons.search, size: 16),
+            onChanged: _onChanged,
+          ),
+          const SizedBox(height: 12),
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(
+                child: CkProgress(size: CkProgressSize.sm, color: CkProgressColor.primary),
+              ),
+            )
+          else
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 320),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _results.length,
+                itemBuilder: (context, i) {
+                  final s = _results[i];
+                  return ListTile(
+                    dense: true,
+                    leading: Icon(LucideIcons.leaf, size: 16, color: context.appMuted),
+                    title: Text(s.name, style: TextStyle(color: context.appHeading)),
+                    subtitle: s.category != null
+                        ? Text(s.category!, style: TextStyle(color: context.appMuted, fontSize: 12))
+                        : null,
+                    onTap: () => Navigator.pop(context, s),
+                  );
+                },
+              ),
+            ),
+        ],
       ),
     );
   }
