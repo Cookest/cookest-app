@@ -178,7 +178,7 @@ class ProfileScreen extends ConsumerWidget {
                       context,
                       icon: LucideIcons.chefHat,
                       label: 'My Recipes',
-                      onTap: () => context.go('/recipes'),
+                      onTap: () => context.push('/profile/recipes'),
                     ),
                     const CkDivider(),
                     _buildSettingsRow(

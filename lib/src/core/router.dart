@@ -22,6 +22,7 @@ import '../features/pantry/screens/inventory_screen.dart';
 import '../features/shopping_list/screens/shopping_list_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
 import '../features/profile/screens/settings_screen.dart';
+import '../features/profile/screens/manage_recipes_screen.dart';
 import '../features/chat/screens/chat_screen.dart';
 import '../features/subscription/screens/paywall_screen.dart';
 import '../features/recipes/screens/recipe_detail_screen.dart';
@@ -146,6 +147,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile',
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/profile/recipes',
+        builder: (context, state) => const ManageRecipesScreen(),
       ),
       GoRoute(
         path: '/settings',
